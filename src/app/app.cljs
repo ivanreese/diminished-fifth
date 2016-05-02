@@ -3,14 +3,15 @@
 ;; This file is the entry point of the system, and orchestrates everything.
 
 (ns ^:figwheel-always app.app
-  (:require [data.manifest :as manifest]))
+  (:require [ajax.core :refer [GET]]))
 
-(defn- initialize!
-  "In the correct order, set up all the subsystems in our app. Takes the js window object. Return value should be ignored."
-  [window]
-  "Stubby")
+(defn log [s]
+  (.log js/console s))
 
-;; PUBLIC
+(defn- loadManifest [cb]
+  (GET "/manifest.json" {:handler cb}))
 
-;; This is how we bootstrap the app. In the future, different production environments might require changing this.
+(defn- initialize! [window]
+  (loadManifest log))
+
 (defonce initialized (do (initialize! js/window) true))
