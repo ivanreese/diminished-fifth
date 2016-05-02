@@ -1,0 +1,4 @@
+.lein-repl-history
+figwheel_server.log
+resources/public/scripts
+target

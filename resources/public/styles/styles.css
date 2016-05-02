@@ -1,0 +1,21 @@
+*, *:before, *:after { box-sizing: border-box; }
+
+html, body, canvas {
+  width: 100%;
+  height: 100%;
+}
+
+html {
+  font-family: sans-serif;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at center, #24282e 85%, #1f2328);
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
