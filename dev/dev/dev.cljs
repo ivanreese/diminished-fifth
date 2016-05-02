@@ -1,6 +1,6 @@
 (ns dev.dev
   (:require [dev.setup]
-            [diminished.core]
+            [app.app]
             [figwheel.client :refer [start]]))
 
 (start)

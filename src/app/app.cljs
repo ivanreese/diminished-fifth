@@ -1,8 +1,8 @@
-;;;; Core
-;; The core namespace holds most the state, and most of the control flow, in our system.
+;;;; App
+;; The app namespace holds most the state, and most of the control flow, in our system.
 ;; This file is the entry point of the system, and orchestrates everything.
 
-(ns ^:figwheel-always diminished.core
+(ns ^:figwheel-always app.app
   (:require [data.manifest :as manifest]))
 
 (defn- initialize!
