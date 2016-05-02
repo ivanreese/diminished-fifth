@@ -4,12 +4,18 @@
 (defonce state (atom nil))
 
 (defn log [s]
-  (.log js/console s))
+  (.log js/console (clj->js s)))
 
-(defn- loadManifest [cb]
-  (GET "/manifest.json" {:handler cb}))
+(defn- saveAndLog [v]
+  (do
+   (swap! state merge v)
+   (log @state)))
+
+(defn- loadManifest []
+  (GET "/manifest.json"
+       {:handler saveAndLog}))
 
 (defn- initialize! [window]
-  (loadManifest log))
+  (loadManifest))
 
 (defonce initialized (do (initialize! js/window) true))
