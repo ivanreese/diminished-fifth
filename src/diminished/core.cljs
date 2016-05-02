@@ -2,7 +2,8 @@
 ;; The core namespace holds most the state, and most of the control flow, in our system.
 ;; This file is the entry point of the system, and orchestrates everything.
 
-(ns ^:figwheel-always diminished.core)
+(ns ^:figwheel-always diminished.core
+  (:require [data.manifest :as manifest]))
 
 (defn- initialize!
   "In the correct order, set up all the subsystems in our app. Takes the js window object. Return value should be ignored."
