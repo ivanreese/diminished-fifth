@@ -11,14 +11,17 @@
   
   :hooks [leiningen.cljsbuild]
   
-  :figwheel {:css-dirs ["resources/public/styles"]}
+  :figwheel {:css-dirs ["resources/public/styles"]
+             :server-port 3000
+             :open-file-command "atom"}
   
   :clean-targets ^{:protect false} ["resources/public/scripts"]
   
   :cljsbuild {:builds {:main {:source-paths ["src"]
                               :compiler {:output-to "resources/public/scripts/scripts.js"
                                          :output-dir "resources/public/scripts"
-                                         :compiler-stats true}}}}
+                                         :compiler-stats true
+                                         :language-out :ecmascript5-strict}}}}
   
   :profiles {
              ; lein figwheel
