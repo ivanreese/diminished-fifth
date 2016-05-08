@@ -6,20 +6,26 @@
 
 (defonce state (atom nil))
 
+(defn soon [fn]
+  (js/window.setTimeout fn 30))
+
 (defn log [s]
   (js/console.log (clj->js s)))
 
 (defn- saveAndLog [v]
   (do
-   (swap! state merge v)
+   
    (log @state)))
 
 (defn- initialize! [window]
   (go
-    (-> (loadManifest!)
-        (<!)
-        (log))))
+    (let [manifest (<! (loadManifest!))
+          samples (get manifest "samples")
+          melodies (get manifest "melodies")]
+      (log samples)
+      (log melodies))))
+    
+        
 
 ; (defonce initialized (do (initialize! js/window) true))
-(js/console.clear)
-(def initialized (do (initialize! js/window) true))
+(soon #(do (js/console.clear) (soon initialize!)))
