@@ -12,8 +12,7 @@
   :hooks [leiningen.cljsbuild]
   
   :figwheel {:css-dirs ["resources/public/styles"]
-             :server-port 3000
-             :open-file-command "atom"}
+             :server-port 3000}
   
   :clean-targets ^{:protect false} ["resources/public/scripts"]
   
