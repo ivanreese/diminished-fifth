@@ -1,17 +1,10 @@
 (ns app.manifest
-  (:require [ajax.core :refer [GET]]))
-            
+  (:require [ajax.core :refer [GET]]
+            [cljs.core.async :as async :refer [<! >! chan close! sliding-buffer put! alts!]])
+  (:require-macros [cljs.core.async.macros :as m :refer [go alt!]]))
 
-(defonce state (atom nil))
-
-(defn log [s]
-  (.log js/console (clj->js s)))
-
-(defn- saveAndLog [v]
-  (do
-   (swap! state merge v)
-   (log @state)))
-
-(defn loadManifest []
-  (GET "/manifest.json"
-       {:handler saveAndLog}))
+(defn loadManifest! []
+  (let [ch (chan)]
+    (GET "/manifest.json"
+         {:handler #(go (>! ch %))})
+    ch))

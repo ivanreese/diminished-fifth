@@ -1,6 +1,7 @@
 (ns dev.dev
-  (:require [dev.setup]
-            [app.app]
+  (:require [app.app]
             [figwheel.client :refer [start]]))
+
+(enable-console-print!)
 
 (start)
