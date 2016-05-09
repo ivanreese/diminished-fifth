@@ -114,15 +114,18 @@
                    (drop-last lines))})))
 
 
-(defn play [sample]
-  (let [source (.createBufferSource audio-context)]
+(defn play [sample note]
+  (let [source (.createBufferSource audio-context)
+        gain (.createGain audio-context)]
     (aset source "buffer" (:buffer sample))
-    (aset source "playbackRate" "value" 1)
-    (.connect source (:input master))
+    (aset source "playbackRate" "value" (:pitch note))
+    (aset gain "gain" "value" (:volume note))
+    (.connect source gain)
+    (.connect gain (:input master))
     (.start source)))
 
 
-(defn load-asset [manifest type loader-fn]
+(defn load-assets [manifest type loader-fn]
   (go
    (->> (get manifest type)
         (map #(str "/" type "/" %))
@@ -136,9 +139,9 @@
 (defn- initialize! []
   (go
     (let [manifest (<! (ajax-channel "/manifest.json"))
-          melodies (<! (load-asset manifest "melodies" melody-loader))
-          samples (<! (load-asset manifest "samples" sample-loader))]
-      (play (first samples)))))
+          melodies (<! (load-assets manifest "melodies" melody-loader))
+          samples (<! (load-assets manifest "samples" sample-loader))]
+      (play (first samples) (first (:notes (first melodies)))))))
 
 
 ; (defonce initialized (do (initialize!) true))
