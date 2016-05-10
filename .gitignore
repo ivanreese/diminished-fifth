@@ -1,4 +1,6 @@
 .lein-repl-history
+.nrepl-history
 figwheel_server.log
+out
 resources/public/scripts
 target

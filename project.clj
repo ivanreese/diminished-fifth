@@ -17,7 +17,7 @@
   :clean-targets ^{:protect false} ["resources/public/scripts"]
   
   :cljsbuild {:builds {:main {:source-paths ["src"]
-                              :compiler {:output-to "resources/public/scripts/scripts.js"
+                              :compiler {:output-to "resources/public/scripts/main.js"
                                          :output-dir "resources/public/scripts"
                                          :compiler-stats true
                                          :language-out :ecmascript5-strict}}}}
@@ -33,6 +33,6 @@
              
              ; lein with-profile prod compile
              :prod {:cljsbuild {:builds {:main {:compiler {:optimizations :advanced
-                                                           :source-map "resources/public/scripts/scripts.js.map"
+                                                           :source-map "resources/public/scripts/main.js.map"
                                                            :elide-asserts true
                                                            :pretty-print false}}}}}})
