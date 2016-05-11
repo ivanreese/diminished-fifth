@@ -2,7 +2,7 @@
   (:require [app.assets :refer [load-assets ajax-channel melody-loader sample-loader]]
             [app.audio :refer [play]]
             [app.state :refer [state]]
-            [app.time :as time]
+            [app.engine :as engine]
             [app.util :refer [log]]
             [cljs.core.async :refer [<!]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -10,11 +10,11 @@
 (defn- tick [dt]
   (log dt)
   (play (first (:samples @state)) (first (:notes (first (:melodies @state)))))
-  (time/stop))
+  (engine/stop))
 
 (defn- reloaded []
   (js/console.clear)
-  (time/start tick))
+  (engine/start tick))
 
 (defn- initialize []
   (go
