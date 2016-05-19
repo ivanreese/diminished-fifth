@@ -1,6 +1,6 @@
 (ns app.state)
 
-(defonce state (atom {:players []
-                      :nextIndex 0
-                      :playbackRate 1
-                      :transposition 1}))
+(defonce state (atom {}))
+(defonce samples (atom {}))
+(defonce melodies (atom {}))
+                      

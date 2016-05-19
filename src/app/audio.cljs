@@ -35,17 +35,17 @@
      :wet wet.gain
      :dry dry.gain}))
 
-(defn- make-master []
+(defn make-master []
   (let [input (.createGain audio-context)
         analyser (.createAnalyser audio-context)
         reverb (make-reverb 1, 100, false)
         compressor (.createDynamicsCompressor audio-context)
         output (.createGain audio-context)]
-    (aset input "gain" "value" 1)
+    (aset input "gain" "value" .8)
     (aset compressor "knee" "value" 40)
-    (aset (:wet reverb) "value" 2.0)
-    (aset (:dry reverb) "value" 1.0)
-    (aset output "gain" "value" 1)
+    (aset (:wet reverb) "value" 0)
+    (aset (:dry reverb) "value" 1)
+    (aset output "gain" "value" .66)
     (.connect input analyser)
     (.connect analyser (:input reverb))
     (.connect (:output reverb) compressor)
@@ -54,22 +54,20 @@
     {:input input
      :analyser analyser}))
 
+(defn- init []
+  (swap! state assoc :sample-rate (.-sampleRate audio-context))
+  (swap! state assoc :master (make-master)))
+
+(defonce initialized (do (init) true))
+
 ;; PUBLIC
 
 (defn play [sample note]
-  (let [source (.createBufferSource audio-context)
-        gain (.createGain audio-context)]
+  (let [source (.createBufferSource audio-context) ;; We don't need a ref to this — it is GC'd when sample playback ends
+        gain (.createGain audio-context)] ; This will be GC'd too when sample playback ends
     (aset source "buffer" (:buffer sample))
     (aset source "playbackRate" "value" (:pitch note))
     (aset gain "gain" "value" (:volume note))
     (.connect source gain)
     (.connect gain (:input (:master @state)))
-    (.start source)))
-
-;; SETUP
-
-(defn- initialize []
-  (swap! state assoc :sample-rate (.-sampleRate audio-context))
-  (swap! state assoc :master (make-master)))
-
-(defonce initialized (do (initialize) true))
+    (.start source 0)))

@@ -1,5 +1,6 @@
 (ns app.assets
-  (:require [app.util :refer [log]]
+  (:require [app.math :as math]
+            [app.util :refer [log]]
             [app.audio :refer [audio-context]]
             [ajax.core :refer [GET]]
             [cljs.core.async :as async :refer [<! >! chan close!]])
@@ -39,17 +40,22 @@
       :index index
       :buffer (<! decode-ch)})))
 
+(defn make-note [index line]
+  (-> [:pitch :volume :position]
+      (zipmap (mapv js/Number (clojure.string/split line " ")))
+      (assoc :index index)
+      (update :position / 1000)
+      (update :volume math/to-precision 12)))
+
 (defn melody-loader [index url]
   (go
-    (let [melody (<! (ajax-channel url))
-          lines (clojure.string/split-lines melody)]
-      {:name url
-       :index index
-       :duration (count lines)
-       :notes (map (fn [line]
-                     (zipmap [:pitch :volume :position]
-                             (clojure.string/split line " ")))
-                   (drop-last lines))})))
+   (let [melody (<! (ajax-channel url))
+         lines (clojure.string/split-lines melody)]
+     {:name url
+      :index index
+      :duration (/ (last lines) 1000)
+      :notes (map-indexed make-note
+                          (drop-last lines))})))
 
 (defn load-assets [manifest type loader-fn]
   (go
