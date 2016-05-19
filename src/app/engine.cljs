@@ -1,29 +1,38 @@
 (ns app.engine
-  (:require [app.state :refer [state]]))
+  (:require [app.state :refer [state callback]]))
 
 (defn- tick [time-ms]
-  (when (:engine/running @state)
+  (when (get-in @state [:engine :running])
     (.requestAnimationFrame js/window tick)
-    (let [time (/ time-ms 1000)
-          last-time (:engine/time @state)
+    (let [start-time (get-in @state [:engine :start-time])
+          last-time (get-in @state [:engine :time])
+          time (- (/ time-ms 1000) start-time)
           dt (- time last-time)]
-      (swap! state assoc :engine/time time)
-      ((:engine/callback @state) dt))))
+      (swap! state assoc-in [:engine :time] time)
+      (@callback dt))))
 
 (defn- first-tick [time-ms]
-  (swap! state assoc :engine/time (/ time-ms 1000))
+  (swap! state assoc-in [:engine :start-time] (/ time-ms 1000))
   (.requestAnimationFrame js/window tick))
+
+(defn- begin-raf! [state]
+  (.requestAnimationFrame js/window first-tick)
+  state)
+  
 
 ;; PUBLIC
 
-(defn init [callback]
-  (swap! state assoc :engine/running false)
-  (swap! state assoc :engine/callback callback))
+(defn init [state cb]
+  (reset! callback cb)
+  (assoc-in state [:engine :running] false))
 
-(defn start []
-  (when-not (:engine/running @state)
-    (swap! state assoc :engine/running true)
-    (.requestAnimationFrame js/window first-tick)))
+(defn start [state]
+  (if (get-in state [:engine :running])
+    state
+    (-> state
+        (assoc-in [:engine :running] true)
+        (assoc-in [:engine :time] 0)
+        (begin-raf!))))
 
-(defn stop []
-  (swap! state assoc :engine/running false))
+(defn stop [state]
+  (assoc-in state [:engine :running] false))

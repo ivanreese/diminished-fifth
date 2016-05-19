@@ -1,10 +1,14 @@
-(ns app.audio
-  (:require [app.util :refer [log]]
-            [app.state :refer [state]]))
+(ns app.audio)
 
 (defonce audio-context (let [AC (or (.-AudioContext js/window)
                                     (.-webkitAudioContext js/window))]
                          (AC.)))
+
+(defonce sample-rate (.-sampleRate audio-context))
+
+
+
+
 
 (defn make-impulse [n length decay]
   (* (- 1 (* 2 (.random js/Math)))
@@ -16,8 +20,8 @@
         input (.createGain audio-context)
         output (.createGain audio-context)
         convolver (.createConvolver audio-context)
-        length (* (:sample-rate @state) seconds)
-        impulse (.createBuffer audio-context 2 length (:sample-rate @state))
+        length (* sample-rate seconds)
+        impulse (.createBuffer audio-context 2 length sample-rate)
         impulseL (.getChannelData impulse 0)
         impulseR (.getChannelData impulse 1)]
     (doseq [i (range length)]
@@ -35,16 +39,20 @@
      :wet wet.gain
      :dry dry.gain}))
 
-(defn make-master []
+
+
+
+
+(defonce master
   (let [input (.createGain audio-context)
         analyser (.createAnalyser audio-context)
         reverb (make-reverb 1, 100, false)
         compressor (.createDynamicsCompressor audio-context)
         output (.createGain audio-context)]
     (aset input "gain" "value" .8)
-    (aset compressor "knee" "value" 40)
-    (aset (:wet reverb) "value" 0)
-    (aset (:dry reverb) "value" 1)
+    (aset compressor "knee" "value" 3)
+    (aset (:wet reverb) "value" 0.5)
+    (aset (:dry reverb) "value" 0.5)
     (aset output "gain" "value" .66)
     (.connect input analyser)
     (.connect analyser (:input reverb))
@@ -53,12 +61,6 @@
     (.connect output (.-destination audio-context))
     {:input input
      :analyser analyser}))
-
-(defn- init []
-  (swap! state assoc :sample-rate (.-sampleRate audio-context))
-  (swap! state assoc :master (make-master)))
-
-(defonce initialized (do (init) true))
 
 ;; PUBLIC
 
@@ -69,5 +71,5 @@
     (aset source "playbackRate" "value" (:pitch note))
     (aset gain "gain" "value" (:volume note))
     (.connect source gain)
-    (.connect gain (:input (:master @state)))
+    (.connect gain (:input master))
     (.start source 0)))

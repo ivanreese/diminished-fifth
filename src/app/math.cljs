@@ -30,3 +30,6 @@
 
 (defn random [out-min out-max]
   (scale (rand) 0 1 out-min out-max))
+
+(defn scaled-sin [i out-min out-max]
+  (scale (sin i) -1 1 out-min out-max))
