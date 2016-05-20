@@ -1,6 +1,8 @@
 (ns app.canvas)
 
+
 ;; PROPERTY SETTERS
+
 
 (defn fillStyle! [context value]
   (set! (.-fillStyle context) value)
@@ -22,7 +24,13 @@
   (set! (.-lineJoin context) value)
   context)
 
+(defn font! "value: 48px serif" [context value]
+  (set! (.-font context) value)
+  context)
+
+
 ;; FUNCTIONS
+
 
 (defn clearRect! [context x y w h]
   (.clearRect context x y w h)
@@ -64,7 +72,17 @@
   (.stroke context)
   context)
 
+(defn strokeText! [context text x y]
+  (.strokeText context text x y)
+  context)
+
+(defn fillText! [context text x y]
+  (.fillText context text x y)
+  context)
+
+
 ;; NICENESS
+
 
 (defn canvas->context [canvas]
   (.getContext canvas "2d"))

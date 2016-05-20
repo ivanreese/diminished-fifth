@@ -1,5 +1,6 @@
 (ns app.player
   (:require [app.audio :as audio]
+            [app.color :as color]
             [app.math :as math]
             [app.state :refer [melodies samples]]
             [app.util :refer [log]]))
@@ -128,7 +129,8 @@
      :scale 1 ; Adjusted when the Orchestra rescales. Applied to incoming velocity values
      :volume (if (zero? index) 1 0)
      :alive true ; When we die, we'll get filtered out of the list of players
-     :dying false}))
+     :dying false
+     :color (color/random-color)}))
 
 (defn tick [player dt velocity key-transposition]
   (-> player

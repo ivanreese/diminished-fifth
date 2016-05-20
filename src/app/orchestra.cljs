@@ -12,7 +12,7 @@
 ; These trigger rescale
 (def min-velocity 0)
 (def max-velocity 20000)
-(def min-players 2)
+(def min-players 1)
 (def max-players 5)
 (def spawn-time (span/make 6 6)) ;(span/make 4 9))
 (def key-change-time (span/make 100 100)) ;(span/make 60 600))
@@ -129,7 +129,7 @@
       (assoc :players [])
       (assoc :orchestra {:acceleration      (phasor/make 1 1 1 300) ;(phasor/make 1 0.95 1.04 300)
                          :key-change-time   (next-key-change-time time)
-                         :next-player-index 0
+                         :next-player-index 715;(int (math/random 0 1000))
                          :playback-rate 1
                          :spawn-time        (next-spawn-time time)
                          :transposition 1})))

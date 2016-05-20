@@ -18,12 +18,15 @@
   
 ;; PUBLIC
 
+(defn restart [state]
+  (assoc-in state [:engine :time] 0))
+  
 
 (defn start [state]
   (if-not (get-in state [:engine :running])
     (.requestAnimationFrame js/window first-tick))
   (-> state
-    (assoc-in [:engine :time] 0)
+    (restart)
     (assoc-in [:engine :running] true)))
 
 (defn stop [state]
