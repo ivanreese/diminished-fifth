@@ -10,10 +10,12 @@
 (def key-change-steps 7)
 
 ; These trigger rescale
-(defonce min-velocity 0.5)
-(defonce max-velocity 2)
-(defonce spawn-time (span/make 6 6)) ;(span/make 4 9))
-(defonce key-change-time (span/make 100 100)) ;(span/make 60 600))
+(def min-velocity 0)
+(def max-velocity 20000)
+(def min-players 2)
+(def max-players 5)
+(def spawn-time (span/make 6 6)) ;(span/make 4 9))
+(def key-change-time (span/make 100 100)) ;(span/make 60 600))
 
 
 ; PLAYBACK RATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -32,7 +34,7 @@
 (defn rescale [state factor]
   (-> state
     (update-in [:orchestra :playback-rate] / factor)
-    (update-in [:orchestra :players] rescale-players factor)))
+    (update :players rescale-players factor)))
 
 
 (defn restrict-playback-rate [state]
@@ -54,8 +56,8 @@
 
 (declare spawn)
 
-(defn spawn-player-if-none [state time]
-  (if (empty? (get-in state [:orchestra :players]))
+(defn ensure-min-players [state time]
+  (if (> min-players (count (:players state)))
     (spawn state time)
     state))
 
@@ -66,11 +68,11 @@
 
 (defn tick-players [state dt time]
   (-> state
-    (update-in [:orchestra :players] update-players
-               dt
-               (get-in state [:orchestra :playback-rate])
-               (get-in state [:orchestra :transposition]))
-    (spawn-player-if-none time)))
+      (update :players update-players
+              dt
+              (get-in state [:orchestra :playback-rate])
+              (get-in state [:orchestra :transposition]))
+      (ensure-min-players time)))
 
 
 ; SPAWN ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -101,13 +103,16 @@
     state))
 
 (defn spawn [state time]
-  (let [new-player (player/make (first (get-in state [:orchestra :players]))
-                                (get-in state [:orchestra :next-player-index]))]
-    (-> state
-        (update-in [:orchestra :players] conj new-player)
-        (update-in [:orchestra :next-player-index] inc)
-        (assoc-in [:orchestra :spawn-time] (next-spawn-time time))
-        (check-key-change time))))
+  (if (> (count (:players state))
+         max-players)
+    state
+    (let [new-player (player/make (last (:players state))
+                                  (get-in state [:orchestra :next-player-index]))]
+      (-> state
+          (update :players conj new-player)
+          (update-in [:orchestra :next-player-index] inc)
+          (assoc-in [:orchestra :spawn-time] (next-spawn-time time))
+          (check-key-change time)))))
 
 
 (defn tick-spawn [state time]
@@ -120,13 +125,14 @@
 
 
 (defn init [state time]
-  (assoc state :orchestra {:acceleration      (phasor/make 0.99 0.99 0.99 300);(phasor/make 1 0.95 1.04 300)
-                           :key-change-time   (next-key-change-time time)
-                           :next-player-index 0
-                           :playback-rate 1
-                           :players []
-                           :spawn-time        (next-spawn-time time)
-                           :transposition 1}))
+  (-> state
+      (assoc :players [])
+      (assoc :orchestra {:acceleration      (phasor/make 1 1 1 300) ;(phasor/make 1 0.95 1.04 300)
+                         :key-change-time   (next-key-change-time time)
+                         :next-player-index 0
+                         :playback-rate 1
+                         :spawn-time        (next-spawn-time time)
+                         :transposition 1})))
 
 (defn tick [state dt time]
   (-> state

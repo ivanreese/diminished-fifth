@@ -86,6 +86,7 @@
     context))
 
 (defn create! []
-  (-> (.createElement js/document "canvas")
-      (.appendChild js/document.body)
-      canvas->context))
+  (let [canvas (.createElement js/document "canvas")]
+    (.appendChild js/document.body canvas)
+    (js/console.log canvas)
+    (canvas->context canvas)))

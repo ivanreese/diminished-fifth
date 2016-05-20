@@ -4,4 +4,5 @@
 (defonce samples (atom {}))
 (defonce melodies (atom {}))
 (defonce callback (atom nil))
+(defonce context (atom nil))
                       

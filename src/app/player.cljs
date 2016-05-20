@@ -4,9 +4,9 @@
             [app.state :refer [melodies samples]]
             [app.util :refer [log]]))
 
-(def fade-rate 0.15)
-(def transpose-on-repeat .5)
-(def initial-transposition 2)
+(def fade-rate 0.01)
+(def transpose-on-repeat 2)
+(def initial-transposition 1)
 (def min-transposition (/ initial-transposition 8))
 (def max-transposition (* initial-transposition 8))
 (def min-velocity (/ 1 32))
