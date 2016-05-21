@@ -118,7 +118,6 @@
         notes (:notes melody)
         duration (:duration melody)
         next-note (inc (:next-note player))]
-    (add-history player :next-note next-note)
     (if (< next-note (count notes))
       (assoc player :next-note next-note)
       (-> player

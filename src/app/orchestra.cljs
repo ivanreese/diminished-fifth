@@ -41,7 +41,7 @@
 
 (defn tick-acceleration [state time]
   (let [accel (phasor/tick (get-in state [:orchestra :acceleration]) time)]
-    (add-history state :acceleration (:value (math/pow accel 3)))
+    (add-history state :acceleration (:value accel))
     (assoc-in state [:orchestra :acceleration] accel)))
 
 
@@ -157,7 +157,7 @@
 (defn init [state time]
   (-> state
       (assoc :players [])
-      (assoc :orchestra {:acceleration      (phasor/make 1 0.95 1.04 40) ; (phasor/make 1 1 1 300) ;
+      (assoc :orchestra {:acceleration      (phasor/make 1 0.95 1.04 100) ; (phasor/make 1 1 1 300) ;
                          :key-change-time   (next-key-change-time time)
                          :next-player-index 0 ;715;(int (math/random 0 1000))
                          :playback-rate 1

@@ -33,6 +33,10 @@
     (canvas/fillText! c text x y)
     (assoc stack 2 (+ y 30))))
 
+(defn stack-fillStyle! [stack style]
+  (canvas/fillStyle! (nth stack 0) style)
+  stack)
+
 (defn end-stack! [stack]
   (first stack))
 
@@ -78,9 +82,13 @@
         (canvas/font! "36px Futura")
         (canvas/fillText! (get-name player) (+ x pad) (+ y 35))
         (begin-stack! (+ x pad) (+ y 65) "24px Futura")
+        (stack-fillStyle! (color/hsl (mod (hash "position") 360) 50 50))
         (stack-text! (str "Position " (math/to-precision (:position player) 2)))
+        (stack-fillStyle! (color/hsl (mod (hash "next-note") 360) 50 50))
         (stack-text! (str "Next note " (:next-note player)))
+        (stack-fillStyle! (color/hsl (mod (hash "volume") 360) 50 50))
         (stack-text! (str "Volume " (math/to-precision (:volume player) 2)))
+        (stack-fillStyle! c)
         (stack-text! (str "Index " (:index player)))
         (stack-text! (str "Scale " (:scale player)))
         (stack-text! (str "Transposition " (:transposition player)))
@@ -109,9 +117,13 @@
       (canvas/font! "36px Futura")
       (canvas/fillText! "Orchestra" 11 40)
       (begin-stack! 11 65.5 "24px Futura")
+      (stack-fillStyle! (color/hsl (mod (hash "acceleration") 360) 50 50))
       (stack-text! (str "Acceleration " (math/to-precision (get-in state [:orchestra :acceleration :value]) 4)))
+      (stack-fillStyle! (color/hsl (mod (hash "playback-rate") 360) 50 50))
       (stack-text! (str "Playback Rate " (math/to-precision (get-in state [:orchestra :playback-rate]) 4)))
+      (stack-fillStyle! (color/hsl (mod (hash "scaled-playback-rate") 360) 50 50))
       (stack-text! (str "Scaled Playback " (math/to-precision (* (get-in state [:orchestra :playback-rate]) (get-in state [:orchestra :scale])) 4)))
+      (stack-fillStyle! "#FFF")
       (stack-text! (str "Scale " (math/to-precision (get-in state [:orchestra :scale]) 4)))
       (stack-text! (str "Transposition " (math/to-precision (get-in state [:orchestra :transposition]) 4)))
       (stack-text! (str "Wall Time " (math/to-precision (get-in state [:engine :wall-time]) 1)))
