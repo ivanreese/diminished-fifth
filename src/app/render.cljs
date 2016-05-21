@@ -136,11 +136,11 @@
       (stack-text! (str "Wall Time " (math/to-precision (get-in state [:engine :wall-time]) 1)))
       (stack-text! (str "Time " (math/to-precision (get-in state [:engine :time]) 1)))
       (stack-text! (str "Count " (get-in state [:engine :count])))
-      (end-stack!)
-      (draw-history :orchestra 300.5 5.5 (- width 310.5) orchestra-height 20000))))
+      (end-stack!))))
+      ; (draw-history :orchestra 300.5 5.5 (- width 310.5) orchestra-height 20000))))
 
 (defn render! [state context]
   (-> context
       (canvas/clear!)
-      (render-players state)
+      ; (render-players state)
       (render-orchestra state)))

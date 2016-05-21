@@ -27,11 +27,9 @@
   
 
 (defn start [state]
-  (if-not (get-in state [:engine :running])
+  (when-not (get-in state [:engine :running])
     (.requestAnimationFrame js/window first-tick))
-  (-> state
-    (restart)
-    (assoc-in [:engine :running] true)))
+  (assoc-in state [:engine :running] true))
 
 (defn stop [state]
   (assoc-in state [:engine :running] false))

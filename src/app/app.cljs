@@ -12,7 +12,12 @@
 (defonce tick-once-mode (atom false))
 
 (defn tick-once []
-  (reset! tick-once-mode (not @tick-once-mode)))
+  (let [mode (not @tick-once-mode)
+        btn (js/document.querySelector ".tick-once.button")]
+    (reset! tick-once-mode mode)
+    (if mode
+      (.setAttribute btn "active" true)
+      (.removeAttribute btn "active"))))
 
 (defn play []
   (swap! state engine/start))
@@ -33,11 +38,20 @@
     (canvas/resize! @context w h)))
 
 (defn restart []
-  (reset! state {:engine {:time 0}})
+  (reset! state {})
   (reset! history {})
   (resize)
+  (swap! state engine/restart)
   (swap! state orchestra/init (get-in @state [:engine :time]))
   (play))
+
+(defn sound-check []
+  (prn "ME"))
+
+(defn setup-button [class callback]
+  (.addEventListener (js/document.querySelector (str "." class))
+                     "click"
+                     callback))
 
 (defn init []
   (go
@@ -46,6 +60,11 @@
       (reset! samples (<! (load-assets manifest "samples" sample-loader)))
       (reset! context (canvas/create!))
       (js/window.addEventListener "resize" resize)
+      (setup-button "play" play)
+      (setup-button "pause" pause)
+      (setup-button "restart" restart)
+      (setup-button "tick-once" tick-once)
+      (setup-button "sound-check" sound-check)
       (resize)
       (restart))))
 
