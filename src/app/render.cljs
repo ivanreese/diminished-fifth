@@ -6,10 +6,9 @@
             [app.state :refer [state history history-min history-max]]))
 
 (def dpi 1)
-(def orchestra-height (* dpi 100))
-(def player-height (* dpi 114))
-(def pad (- (* 4 dpi) 0.5))
+(def pad (- (* 8 dpi) 0.5))
 (def columns 3)
+(def rows 7) ; Including the orchestra row
 
 (defn get-name [player]
   (-> player
@@ -77,9 +76,9 @@
 
 (defn draw-player [state context player index player-count width height]
   (let [w (/ width columns)
-        h player-height
+        h (/ height (+ 1 (math/ceil (/ (count (:players state)) columns))))
         x (+ pad (* (mod index columns) w))
-        y (+ (* (int (/ index columns)) h) pad orchestra-height)
+        y (+ pad (* (int (/ index columns)) h) h)
         opacity (min 1 (* 10 (:volume player)))
         c (:color player)]
     (-> context
@@ -87,8 +86,8 @@
       (stroke-box c x y w h)
       (canvas/fillStyle! c)
       (canvas/font! (str (* 18 dpi) "px Futura"))
-      (canvas/fillText! (str (:index player) " " (get-name player)) (+ x pad) (+ y (* 16 dpi)))
-      (begin-stack! (+ x pad) (+ y (* 32 dpi)) (str (* 12 dpi) "px Futura"))
+      (canvas/fillText! (str (:index player) " " (get-name player)) (+ x pad) (+ y pad (* 16 dpi)))
+      (begin-stack! (+ x pad) (+ y pad (* 32 dpi)) (str (* 12 dpi) "px Futura"))
       (stack-fillStyle! (color/hsl (mod (hash "position") 360) 50 50))
       (stack-text! (str "Position " (math/to-precision (:position player) 2)))
       (stack-fillStyle! (color/hsl (mod (hash "current-pitch") 360) 50 50))
@@ -106,21 +105,22 @@
   (let [all-players (:players state)
         player-count (count all-players)
         w (- (:width state) (* 2 pad))
-        h (:height state)]
+        h (- (:height state) (* 2 pad))]
     (loop [players all-players index 0]
       (when-not (empty? players)
         (draw-player state context (first players) index player-count w h)
         (recur (rest players) (inc index))))))
 
 (defn render-orchestra [state context]
-  (let [width (- (:width state) (* 2 pad))]
+  (let [width (- (:width state) (* 2 pad))
+        height (/ (- (:height state) (* 2 pad)) (+ 1 (math/ceil (/ (count (:players state)) columns))))]
     (-> context
       (canvas/globalAlpha! 1)
-      (stroke-box "#FFF" pad pad width orchestra-height)
+      (stroke-box "#FFF" pad pad width height)
       (canvas/fillStyle! "#FFF")
       (canvas/font! (str (* 18 dpi) "px Futura"))
-      (canvas/fillText! "Orchestra" (* 2 pad) (* 20 dpi))
-      (begin-stack! (* 2 pad) (+ pad (* 32 dpi)) (str (* 12 dpi) "px Futura"))
+      (canvas/fillText! "Orchestra" (* 2 pad) (+ (* 2 pad) (* 16 dpi)))
+      (begin-stack! (* 2 pad) (+ (* 2 pad) (* 32 dpi)) (str (* 12 dpi) "px Futura"))
       (stack-fillStyle! (color/hsl (mod (hash "velocity") 360) 50 50))
       (stack-text! (str "Velocity " (math/to-precision (get-in state [:orchestra :velocity]) 4)))
       (stack-fillStyle! (color/hsl (mod (hash "transposition") 360) 50 50))
@@ -130,7 +130,7 @@
       (stack-text! (str "Time " (math/to-precision (get-in state [:engine :time]) 2)))
       (stack-text! (str "Count " (get-in state [:engine :count])))
       (end-stack!)
-      (draw-history :orchestra (+ (* 120 dpi) pad) pad (- width (* 120 dpi)) orchestra-height 12000))))
+      (draw-history :orchestra (+ (* 120 dpi) pad) pad (- width (* 120 dpi)) height 12000))))
 
 (defn render! [state context]
   (canvas/clear! context)

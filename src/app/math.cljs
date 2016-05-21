@@ -6,6 +6,7 @@
 (defonce pow js/Math.pow)
 (defonce sqrt js/Math.sqrt)
 (defonce round js/Math.round)
+(defonce ceil js/Math.ceil)
 (defonce log2 js/Math.log2)
 (defonce sin js/Math.sin)
 

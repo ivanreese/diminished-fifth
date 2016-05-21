@@ -110,8 +110,7 @@
 (defn key-change [state time]
   (-> state
     (assoc-in [:orchestra :key-change-time] (next-key-change-time time))
-    (update-in [:orchestra :transposition] update-transposition)
-    (add-history :transposition (get-in state [:orchestra :transposition]) 1)))
+    (update-in [:orchestra :transposition] update-transposition)))
     
 (defn check-key-change [state time]
   (if (>= time (get-in state [:orchestra :key-change-time]))
@@ -142,10 +141,8 @@
 
 
 (defn init [state time]
-  (init-history :transposition)
   (init-history :velocity)
   (-> state
-      (add-history :transposition 1 1)
       (assoc :players [])
       (assoc :orchestra {:key-change-time   (next-key-change-time time)
                          :next-player-index 0 ;715;(int (math/random 0 1000))
