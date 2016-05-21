@@ -162,7 +162,7 @@
     ; (init-history index :upcoming-note)
     (init-history index :current-pitch)
     (init-history index :position)
-    ; (init-history index :volume)
+    (init-history index :volume)
     {:index index
      :melody-index melody-index
      :sample (nth @samples sample-index)

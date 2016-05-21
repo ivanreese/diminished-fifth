@@ -13,7 +13,7 @@
 (def min-players 1)
 (def max-players 18)
 (def spawn-time (span/make 6 6)) ;(span/make 4 9))
-(def key-change-time (span/make 100 100)) ;(span/make 60 600))
+(def key-change-time (span/make 120 120)) ;(span/make 60 600))
 (def min-velocity 0)
 (def max-velocity 2)
 (def velocity-cycle-time 30)
@@ -41,7 +41,7 @@
 
 (defn advance-velocity [state dt time]
   (let [velocity (math/scale (math/pow (math/sin (/ time velocity-cycle-time)) 3) -1 1 min-velocity max-velocity)]
-    (add-history state :scaled-velocity (* velocity (get-in state [:orchestra :scale])) 30)
+    (add-history state :velocity velocity 30)
     (assoc-in state [:orchestra :velocity] velocity)))
 
 (defn rescale-players [players factor]
@@ -143,7 +143,7 @@
 
 (defn init [state time]
   (init-history :transposition)
-  (init-history :scaled-velocity)
+  (init-history :velocity)
   (-> state
       (add-history :transposition 1 1)
       (assoc :players [])

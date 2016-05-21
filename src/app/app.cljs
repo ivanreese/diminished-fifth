@@ -5,7 +5,7 @@
             [app.engine :as engine]
             [app.orchestra :as orchestra]
             [app.render :refer [render!]]
-            [app.state :refer [state melodies samples callback text-context line-context history history-min history-max]]
+            [app.state :refer [state melodies samples callback text-context history history-min history-max]]
             [cljs.core.async :refer [<!]]
             [cljs.pprint :refer [pprint]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -29,9 +29,7 @@
 (defn tick [dt]
   (when @tick-once-mode (pause))
   (swap! state orchestra/tick dt (get-in @state [:engine :time]))
-  ; (when (or (zero? (mod (get-in @state [:engine :count]) 2))
-  ;          @tick-once-mode)
-  (render! @state @text-context @line-context))
+  (render! @state @text-context))
 
 (defn resize [& args]
   (let [w (.-innerWidth js/window)
@@ -39,9 +37,7 @@
     (swap! state assoc :width w)
     (swap! state assoc :height h)
     (canvas/resize! @text-context w h)
-    (canvas/resize! @line-context w h)
-    (render! @state @text-context @line-context)))
-
+    (render! @state @text-context)))
 
 (defn restart []
   (reset! state {})
@@ -49,7 +45,10 @@
   (resize)
   (swap! state engine/restart)
   (swap! state orchestra/init (get-in @state [:engine :time]))
-  (render! @state @text-context @line-context))
+  (render! @state @text-context))
+
+(defn fullscreen []
+  (js/document.body.webkitRequestFullscreen))
 
 (defn sound-check []
   (let [sample (nth @samples (int (rand (count @samples))))
@@ -69,12 +68,12 @@
       (reset! melodies (<! (load-assets manifest "melodies" melody-loader)))
       (reset! samples (<! (load-assets manifest "samples" sample-loader)))
       (reset! text-context (canvas/create!))
-      (reset! line-context (canvas/create!))
       (js/window.addEventListener "resize" resize)
       (setup-button "play" play)
       (setup-button "pause" pause)
       (setup-button "restart" restart)
       (setup-button "tick-once" tick-once)
+      (setup-button "fullscreen" fullscreen)
       (setup-button "sound-check" sound-check)
       (resize)
       (restart))))

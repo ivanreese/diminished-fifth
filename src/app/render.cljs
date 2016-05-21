@@ -6,7 +6,7 @@
             [app.state :refer [state history history-min history-max]]))
 
 (def dpi 1)
-(def orchestra-height (* dpi 130))
+(def orchestra-height (* dpi 100))
 (def player-height (* dpi 114))
 (def pad (- (* 4 dpi) 0.5))
 (def columns 3)
@@ -75,51 +75,46 @@
       (canvas/stroke! ctx)))
   ctx)
 
-(defn draw-player [state text-context line-context player index player-count width height]
+(defn draw-player [state context player index player-count width height]
   (let [w (/ width columns)
         h player-height
         x (+ pad (* (mod index columns) w))
         y (+ (* (int (/ index columns)) h) pad orchestra-height)
         opacity (min 1 (* 10 (:volume player)))
         c (:color player)]
-    (-> line-context
+    (-> context
       (canvas/globalAlpha! opacity)
-      (draw-history (:index player) (+ (* 150 dpi) x) y (- w (* 150 dpi)) h 1000))
-    (-> text-context
-        (canvas/globalAlpha! opacity)
-        (stroke-box c x y w h)
-        (canvas/fillStyle! c)
-        (canvas/font! (str (* 18 dpi) "px Futura"))
-        (canvas/fillText! (str (:index player) " " (get-name player)) (+ x pad) (+ y (* 16 dpi)))
-        (begin-stack! (+ x pad) (+ y (* 32 dpi)) (str (* 12 dpi) "px Futura"))
-        (stack-fillStyle! (color/hsl (mod (hash "position") 360) 50 50))
-        (stack-text! (str "Position " (math/to-precision (:position player) 2)))
-        (stack-fillStyle! (color/hsl (mod (hash "current-pitch") 360) 50 50))
-        (stack-text! (str "Current Pitch " (math/to-precision (:current-pitch player) 3)))
-        (stack-fillStyle! c)
-        (stack-text! (str "Upcoming Note " (:upcoming-note player)))
-        (stack-text! (str "Volume " (math/to-precision (:volume player) 2)))
-        (stack-text! (str "Scale " (:scale player)))
-        (stack-text! (str "Transposition " (:transposition player)))
-        (end-stack!)
-        (draw-dying! player (+ x w (* -36 dpi)) (+ (* 16 dpi) y) (get-in state [:orchestra :velocity])))))
+      (stroke-box c x y w h)
+      (canvas/fillStyle! c)
+      (canvas/font! (str (* 18 dpi) "px Futura"))
+      (canvas/fillText! (str (:index player) " " (get-name player)) (+ x pad) (+ y (* 16 dpi)))
+      (begin-stack! (+ x pad) (+ y (* 32 dpi)) (str (* 12 dpi) "px Futura"))
+      (stack-fillStyle! (color/hsl (mod (hash "position") 360) 50 50))
+      (stack-text! (str "Position " (math/to-precision (:position player) 2)))
+      (stack-fillStyle! (color/hsl (mod (hash "current-pitch") 360) 50 50))
+      (stack-text! (str "Current Pitch " (math/to-precision (:current-pitch player) 3)))
+      (stack-fillStyle! c)
+      (stack-text! (str "Upcoming Note " (:upcoming-note player)))
+      (stack-text! (str "Volume " (math/to-precision (:volume player) 2)))
+      (stack-text! (str "Scale " (:scale player)))
+      (stack-text! (str "Transposition " (:transposition player)))
+      (end-stack!)
+      (draw-dying! player (+ x w (* -36 dpi)) (+ (* 16 dpi) y) (get-in state [:orchestra :velocity]))
+      (draw-history (:index player) (+ (* 150 dpi) x) y (- w (* 150 dpi)) h 1000))))
 
-(defn render-players [state text-context line-context]
+(defn render-players [state context]
   (let [all-players (:players state)
         player-count (count all-players)
         w (- (:width state) (* 2 pad))
         h (:height state)]
     (loop [players all-players index 0]
       (when-not (empty? players)
-        (draw-player state text-context line-context (first players) index player-count w h)
+        (draw-player state context (first players) index player-count w h)
         (recur (rest players) (inc index))))))
 
-(defn render-orchestra [state text-context line-context]
+(defn render-orchestra [state context]
   (let [width (- (:width state) (* 2 pad))]
-    (-> line-context
-      (canvas/globalAlpha! 1)
-      (draw-history :orchestra (+ (* 120 dpi) pad) pad (- width (* 120 dpi)) orchestra-height 12000))
-    (-> text-context
+    (-> context
       (canvas/globalAlpha! 1)
       (stroke-box "#FFF" pad pad width orchestra-height)
       (canvas/fillStyle! "#FFF")
@@ -128,18 +123,16 @@
       (begin-stack! (* 2 pad) (+ pad (* 32 dpi)) (str (* 12 dpi) "px Futura"))
       (stack-fillStyle! (color/hsl (mod (hash "velocity") 360) 50 50))
       (stack-text! (str "Velocity " (math/to-precision (get-in state [:orchestra :velocity]) 4)))
-      (stack-fillStyle! (color/hsl (mod (hash "scaled-velocity") 360) 50 50))
-      (stack-text! (str "Scaled Velocity " (math/to-precision (* (get-in state [:orchestra :velocity]) (get-in state [:orchestra :scale])) 4)))
-      (stack-fillStyle! "#FFF")
-      (stack-text! (str "Scale " (math/to-precision (get-in state [:orchestra :scale]) 4)))
+      (stack-fillStyle! (color/hsl (mod (hash "transposition") 360) 50 50))
       (stack-text! (str "Transposition " (math/to-precision (get-in state [:orchestra :transposition]) 4)))
+      (stack-fillStyle! "#FFF")
       (stack-text! (str "Wall Time " (math/to-precision (get-in state [:engine :wall-time]) 2)))
       (stack-text! (str "Time " (math/to-precision (get-in state [:engine :time]) 2)))
       (stack-text! (str "Count " (get-in state [:engine :count])))
-      (end-stack!))))
+      (end-stack!)
+      (draw-history :orchestra (+ (* 120 dpi) pad) pad (- width (* 120 dpi)) orchestra-height 12000))))
 
-(defn render! [state text-context line-context]
-  (canvas/clear! text-context)
-  (canvas/clear! line-context)
-  (render-players state text-context line-context)
-  (render-orchestra state text-context line-context))
+(defn render! [state context]
+  (canvas/clear! context)
+  (render-players state context)
+  (render-orchestra state context))

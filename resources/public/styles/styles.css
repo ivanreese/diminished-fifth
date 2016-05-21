@@ -15,13 +15,13 @@ html {
 
 body {
   margin: 0;
-  background: radial-gradient(circle at center, #24282e 85%, #1f2328);
 }
 
 canvas {
   position: absolute;
   top: 0;
   left: 0;
+  background: #24282e;
 }
 
 .buttons {
