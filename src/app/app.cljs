@@ -5,7 +5,7 @@
             [app.engine :as engine]
             [app.orchestra :as orchestra]
             [app.render :refer [render!]]
-            [app.state :refer [state melodies samples callback context history]]
+            [app.state :refer [state melodies samples callback context history history-min history-max]]
             [cljs.core.async :refer [<!]]
             [cljs.pprint :refer [pprint]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -38,7 +38,9 @@
         h (* 2 (.-innerHeight js/window))]
     (swap! state assoc :width w)
     (swap! state assoc :height h)
-    (canvas/resize! @context w h)))
+    (canvas/resize! @context w h)
+    (render! @state @context)))
+
 
 (defn restart []
   (reset! state {})

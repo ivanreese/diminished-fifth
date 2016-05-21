@@ -3,11 +3,12 @@
             [app.color :as color]
             [app.math :as math :refer [tau]]
             [app.player :as player]
-            [app.state :refer [history]]))
+            [app.state :refer [history history-min history-max]]))
 
 (def orchestra-height 280)
 (def player-height 225)
 (def columns 3)
+(defonce counter (atom 0))
 
 (defn get-name [player]
   (-> player
@@ -56,23 +57,23 @@
   
 (defn draw-seg [i v context base-x base-y width height min-v max-v max-history]
   (canvas/lineTo! context
-                  (+ base-x (* width (/ (+ i 1) max-history)))
+                  (+ base-x (* width (/ i max-history)))
                   (+ base-y (* (math/scale v min-v max-v height 0)))))
 
-(defn draw-history [context key base-x base-y width height max-history]
-  (doseq [prop (get @history key)
-          :let [name (name (first prop))
-                values (second prop)
-                min-v (reduce min values)
-                max-v (reduce max values)
-                v (first values)
-                x base-x
-                y (+ base-y (* (math/scale v min-v max-v height 0)))]]
-    (-> context
-        (canvas/beginPath!)
-        (canvas/strokeStyle! (color/hsl (mod (hash name) 360) 50 50))
-        (canvas/moveTo! x y))
-    (dorun (map #(draw-seg %1 %2 context base-x base-y width height min-v max-v max-history) (range) (rest values)))
+(defn draw-history [context subject-key base-x base-y width height max-history]
+  (doseq [prop-tuple (get @history subject-key)
+          :let [prop-key (nth prop-tuple 0)
+                values (nth prop-tuple 1)
+                n-values (count values)
+                min-v (get-in @history-min [subject-key prop-key])
+                max-v (get-in @history-max [subject-key prop-key])]]
+    (canvas/beginPath! context)
+    (canvas/strokeStyle! context (color/hsl (mod (hash (name prop-key)) 360) 50 50))
+    (canvas/moveTo! context base-x (+ base-y (* (math/scale (nth values 0) min-v max-v height 0))))
+    (reset! counter 1)
+    (while (< @counter n-values)
+      (draw-seg @counter (nth values @counter) context base-x base-y width height min-v max-v max-history)
+      (swap! counter inc))
     (canvas/stroke! context))
   context)
 

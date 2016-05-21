@@ -2,7 +2,7 @@
   (:require [app.audio :as audio]
             [app.color :as color]
             [app.math :as math]
-            [app.state :refer [state melodies samples history]]
+            [app.state :refer [state melodies samples history history-max history-min]]
             [app.util :refer [log]]
             [cljs.pprint :refer [pprint]]))
 
@@ -35,26 +35,30 @@
 ;; HISTORY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn trim-history-prop [m k v]
-  (assoc m k (if (> (count v) 2500) (drop-last 1 v) v)))
-
-(defn trim-history-all-props [history]
-  (reduce-kv trim-history-prop {} history))
-
 (defn trim-history [player]
-  (if (:alive player)
-    (swap! history update (:index player) trim-history-all-props)
+  (when-not (:alive player)
     (swap! history dissoc (:index player)))
   player)
 
 (defn add-history [player key value]
   (when (odd? (get-in @state [:engine :count]))
-    (swap! history update-in [(:index player) key] conj (or value 0)))
+    (let [value (or value 0)]
+      (swap! history update-in [(:index player) key] conj value)
+      (if (nil? (get-in @history-min [(:index player) key]))
+        (swap! history-min assoc-in [(:index player) key] value)
+        (swap! history-min update-in [(:index player) key] min value))
+      (if (nil? (get-in @history-max [(:index player) key]))
+        (swap! history-max assoc-in [(:index player) key] value)
+        (swap! history-max update-in [(:index player) key] max value))))
   player)
 
 (defn add-history-prop [player key]
   (add-history player key (key player)))
 
+(defn init-history [index key]
+  (swap! history assoc-in [index key] [])
+  (swap! history-min assoc-in [index key Infinity])
+  (swap! history-max assoc-in [index key -Infinity]))
 
 ;; MAKE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -155,6 +159,10 @@
         sample-index (mod index (count @samples))
         position (get-sync-position reference-player)
         upcoming-note (determine-starting-note melody-index position)]
+    (init-history index :upcoming-note)
+    (init-history index :current-pitch)
+    (init-history index :position)
+    (init-history index :volume)
     {:index index
      :melody-index melody-index
      :sample (nth @samples sample-index)

@@ -3,7 +3,7 @@
             [app.phasor :as phasor]
             [app.player :as player]
             [app.span :as span]
-            [app.state :refer [state history]]
+            [app.state :refer [state history history-max history-min]]
             [app.util :refer [log]]
             [cljs.pprint :refer [pprint]]))
 
@@ -22,20 +22,18 @@
 ; HISTORY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn trim-history-prop [m k v]
-  (assoc m k (if (> (count v) 10000) (drop-last 1 v) v)))
-
-(defn trim-history-all-props [history]
-  (reduce-kv trim-history-prop {} history))
-
-(defn trim-history [state]
-  (swap! history update :orchestra trim-history-all-props)
-  state)
-
 (defn add-history [state key value]
   (when (odd? (get-in state [:engine :count]))
-    (swap! history update-in [:orchestra key] conj value))
+    (let [value (or value 0)]
+      (swap! history update-in [:orchestra key] conj value)
+      (swap! history-min update-in [:orchestra key] min value)
+      (swap! history-max update-in [:orchestra key] max value)))
   state)
+
+(defn init-history [key]
+  (swap! history assoc-in [:orchestra key] [])
+  (swap! history-min assoc-in [:orchestra key] Infinity)
+  (swap! history-max assoc-in [:orchestra key] -Infinity))
 
 
 ; PLAYBACK RATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -47,7 +45,6 @@
     (add-history state :scaled-velocity (* velocity (get-in state [:orchestra :scale])))
     (assoc-in state [:orchestra :velocity] velocity)))
 
-
 (defn rescale-players [players factor]
   (mapv #(player/rescale % factor) players))
 
@@ -55,7 +52,6 @@
   (-> state
     (update-in [:orchestra :scale] / factor)
     (update :players rescale-players factor)))
-
 
 (defn restrict-velocity [state]
   (cond
@@ -146,6 +142,8 @@
 
 
 (defn init [state time]
+  (init-history :velocity)
+  (init-history :scaled-velocity)
   (-> state
       (assoc :players [])
       (assoc :orchestra {:key-change-time   (next-key-change-time time)
@@ -159,5 +157,4 @@
   (-> state
       (tick-velocity dt time)
       (tick-players dt time)
-      (tick-spawn time)
-      (trim-history)))
+      (tick-spawn time)))

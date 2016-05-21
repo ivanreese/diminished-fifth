@@ -6,4 +6,6 @@
 (defonce callback (atom nil))
 (defonce context (atom nil))
 (defonce history (atom {}))
+(defonce history-min (atom {}))
+(defonce history-max (atom {}))
                       
