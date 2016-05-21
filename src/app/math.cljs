@@ -4,6 +4,9 @@
 (defonce rad (/ js/Math.PI 180))
 
 (defonce pow js/Math.pow)
+(defonce sqrt js/Math.sqrt)
+(defonce round js/Math.round)
+(defonce log2 js/Math.log2)
 (defonce sin js/Math.sin)
 
 (defn to-precision [i p]
