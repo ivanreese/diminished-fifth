@@ -1,5 +1,6 @@
 (ns ^:figwheel-always app.app
   (:require [app.assets :refer [load-assets ajax-channel melody-loader sample-loader]]
+            [app.audio :as audio]
             [app.canvas :as canvas]
             [app.engine :as engine]
             [app.orchestra :as orchestra]
@@ -28,7 +29,9 @@
 (defn tick [dt]
    (when @tick-once-mode (pause))
    (swap! state orchestra/tick dt (get-in @state [:engine :time]))
-   (render! @state @context))
+   (when (or (zero? (mod (get-in @state [:engine :count]) 3))
+             @tick-once-mode)
+     (render! @state @context)))
 
 (defn resize [& args]
   (let [w (* 2 (.-innerWidth js/window))
@@ -43,10 +46,14 @@
   (resize)
   (swap! state engine/restart)
   (swap! state orchestra/init (get-in @state [:engine :time]))
-  (play))
+  (render! @state @context))
 
 (defn sound-check []
-  (prn "ME"))
+  (let [sample (nth @samples (int (rand (count @samples))))
+        melody (nth @melodies (int (rand (count @melodies))))
+        notes (:notes melody)
+        note (nth notes (int (rand (count notes))))]
+    (audio/play sample note)))
 
 (defn setup-button [class callback]
   (.addEventListener (js/document.querySelector (str "." class))

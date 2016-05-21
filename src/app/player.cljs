@@ -2,7 +2,7 @@
   (:require [app.audio :as audio]
             [app.color :as color]
             [app.math :as math]
-            [app.state :refer [melodies samples history]]
+            [app.state :refer [state melodies samples history]]
             [app.util :refer [log]]
             [cljs.pprint :refer [pprint]]))
 
@@ -36,7 +36,7 @@
 
 
 (defn trim-history-prop [m k v]
-  (assoc m k (if (> (count v) 10000) (drop-last 1 v) v)))
+  (assoc m k (if (> (count v) 2500) (drop-last 1 v) v)))
 
 (defn trim-history-all-props [history]
   (reduce-kv trim-history-prop {} history))
@@ -48,7 +48,8 @@
   player)
 
 (defn add-history [player key value]
-  (swap! history update-in [(:index player) key] conj (or value 0))
+  (when (odd? (get-in @state [:engine :count]))
+    (swap! history update-in [(:index player) key] conj (or value 0)))
   player)
 
 (defn add-history-prop [player key]

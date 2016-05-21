@@ -103,7 +103,7 @@
         (stack-text! (str "Transposition " (:transposition player)))
         (end-stack!)
         (draw-dying! player (+ x w -70) (+ 30 y) (get-in state [:orchestra :velocity]))
-        (draw-history (:index player) (+ 300 x) y (- w 300) h 5000))))
+        (draw-history (:index player) (+ 300 x) y (- w 300) h 2500))))
 
 (defn render-players [context state]
   (let [all-players (:players state)
@@ -133,14 +133,14 @@
       (stack-fillStyle! "#FFF")
       (stack-text! (str "Scale " (math/to-precision (get-in state [:orchestra :scale]) 4)))
       (stack-text! (str "Transposition " (math/to-precision (get-in state [:orchestra :transposition]) 4)))
-      (stack-text! (str "Wall Time " (math/to-precision (get-in state [:engine :wall-time]) 1)))
-      (stack-text! (str "Time " (math/to-precision (get-in state [:engine :time]) 1)))
+      (stack-text! (str "Wall Time " (math/to-precision (get-in state [:engine :wall-time]) 2)))
+      (stack-text! (str "Time " (math/to-precision (get-in state [:engine :time]) 2)))
       (stack-text! (str "Count " (get-in state [:engine :count])))
-      (end-stack!))))
-      ; (draw-history :orchestra 300.5 5.5 (- width 310.5) orchestra-height 20000))))
+      (end-stack!)
+      (draw-history :orchestra 300.5 5.5 (- width 310.5) orchestra-height 10000))))
 
 (defn render! [state context]
   (-> context
       (canvas/clear!)
-      ; (render-players state)
+      (render-players state)
       (render-orchestra state)))

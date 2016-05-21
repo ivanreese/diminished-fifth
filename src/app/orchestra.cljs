@@ -23,7 +23,7 @@
 
 
 (defn trim-history-prop [m k v]
-  (assoc m k (if (> (count v) 20000) (drop-last 1 v) v)))
+  (assoc m k (if (> (count v) 10000) (drop-last 1 v) v)))
 
 (defn trim-history-all-props [history]
   (reduce-kv trim-history-prop {} history))
@@ -33,7 +33,8 @@
   state)
 
 (defn add-history [state key value]
-  (swap! history update-in [:orchestra key] conj value)
+  (when (odd? (get-in state [:engine :count]))
+    (swap! history update-in [:orchestra key] conj value))
   state)
 
 
