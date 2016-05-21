@@ -29,7 +29,6 @@
                                                :compiler {:main dev.dev
                                                           :asset-path "scripts"
                                                           :optimizations :none
-                                                          ; :source-map false}}}}}
                                                           :source-map-timestamp true}}}}}
              
              ; lein with-profile prod compile
