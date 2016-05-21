@@ -83,4 +83,4 @@
     (aset gain "gain" "value" (:volume note))
     (.connect source gain)
     (.connect gain (:input master))
-    (.start source 0)))
+    (.start source (:pos note))))

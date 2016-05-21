@@ -5,7 +5,7 @@
             [app.engine :as engine]
             [app.orchestra :as orchestra]
             [app.render :refer [render!]]
-            [app.state :refer [state melodies samples callback context history history-min history-max]]
+            [app.state :refer [state melodies samples callback text-context line-context history history-min history-max]]
             [cljs.core.async :refer [<!]]
             [cljs.pprint :refer [pprint]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -27,19 +27,20 @@
   (swap! state engine/stop))
 
 (defn tick [dt]
-   (when @tick-once-mode (pause))
-   (swap! state orchestra/tick dt (get-in @state [:engine :time]))
-   (when (or (zero? (mod (get-in @state [:engine :count]) 3))
-             @tick-once-mode)
-     (render! @state @context)))
+  (when @tick-once-mode (pause))
+  (swap! state orchestra/tick dt (get-in @state [:engine :time]))
+  ; (when (or (zero? (mod (get-in @state [:engine :count]) 2))
+  ;          @tick-once-mode)
+  (render! @state @text-context @line-context))
 
 (defn resize [& args]
-  (let [w (* 2 (.-innerWidth js/window))
-        h (* 2 (.-innerHeight js/window))]
+  (let [w (.-innerWidth js/window)
+        h (.-innerHeight js/window)]
     (swap! state assoc :width w)
     (swap! state assoc :height h)
-    (canvas/resize! @context w h)
-    (render! @state @context)))
+    (canvas/resize! @text-context w h)
+    (canvas/resize! @line-context w h)
+    (render! @state @text-context @line-context)))
 
 
 (defn restart []
@@ -48,7 +49,7 @@
   (resize)
   (swap! state engine/restart)
   (swap! state orchestra/init (get-in @state [:engine :time]))
-  (render! @state @context))
+  (render! @state @text-context @line-context))
 
 (defn sound-check []
   (let [sample (nth @samples (int (rand (count @samples))))
@@ -67,7 +68,8 @@
     (let [manifest (<! (ajax-channel "/manifest.json"))]
       (reset! melodies (<! (load-assets manifest "melodies" melody-loader)))
       (reset! samples (<! (load-assets manifest "samples" sample-loader)))
-      (reset! context (canvas/create!))
+      (reset! text-context (canvas/create!))
+      (reset! line-context (canvas/create!))
       (js/window.addEventListener "resize" resize)
       (setup-button "play" play)
       (setup-button "pause" pause)

@@ -3,12 +3,13 @@
             [app.color :as color]
             [app.math :as math :refer [tau]]
             [app.player :as player]
-            [app.state :refer [history history-min history-max]]))
+            [app.state :refer [state history history-min history-max]]))
 
-(def orchestra-height 280)
-(def player-height 225)
+(def dpi 1)
+(def orchestra-height (* dpi 130))
+(def player-height (* dpi 114))
+(def pad (- (* 4 dpi) 0.5))
 (def columns 3)
-(defonce counter (atom 0))
 
 (defn get-name [player]
   (-> player
@@ -17,23 +18,23 @@
       (clojure.string/replace "/samples/" "")
       (clojure.string/replace ".mp3" "")))
 
-(defn stroke-box [context c x y w h]
-  (-> context
+(defn stroke-box [ctx c x y w h]
+  (-> ctx
     (canvas/beginPath!)
     (canvas/strokeStyle! c)
     (canvas/rect! x y w h)
     (canvas/stroke!)))
 
-(defn begin-stack! [context x y f]
-  (canvas/font! context f)
-  [context x y])
+(defn begin-stack! [ctx x y f]
+  (canvas/font! ctx f)
+  [ctx x y])
 
 (defn stack-text! [stack text]
-  (let [c (nth stack 0)
+  (let [ctx (nth stack 0)
         x (nth stack 1)
         y (nth stack 2)]
-    (canvas/fillText! c text x y)
-    (assoc stack 2 (+ y 30))))
+    (canvas/fillText! ctx text x y)
+    (assoc stack 2 (+ y (* dpi 15)))))
 
 (defn stack-fillStyle! [stack style]
   (canvas/fillStyle! (nth stack 0) style)
@@ -42,91 +43,89 @@
 (defn end-stack! [stack]
   (first stack))
 
-(defn draw-dying! [context player x y velocity]
+(defn draw-dying! [ctx player x y velocity]
   (when (:dying player)
-    (canvas/fillText! context "Dying" x y)
-    (when (< (* velocity (:scale player)) player/min-velocity)
-      (canvas/fillText! context "min-velocity" (- x 30) (+ y 30)))
-    (when (> (* velocity (:scale player)) player/max-velocity)
-      (canvas/fillText! context "max-velocity" (- x 30) (+ y 30)))
-    (when (<= (:transposition player) player/min-transposition)
-      (canvas/fillText! context "min-transposition" (- x 130) (+ y 60)))
+    (canvas/fillText! ctx "Dying" x y)
     (when (>= (:transposition player) player/max-transposition)
-      (canvas/fillText! context "max-transposition" (- x 130) (+ y 60))))
-  context)
+      (canvas/fillText! ctx "max-transposition" (- x (* dpi 63)) (+ y (* dpi 15))))
+    (when (> (* velocity (:scale player)) player/max-velocity)
+      (canvas/fillText! ctx "max-velocity" (- x (* 15 dpi)) (+ y (* 30 dpi)))))
+  ctx)
   
-(defn draw-seg [i v context base-x base-y width height min-v max-v max-history]
-  (canvas/lineTo! context
-                  (+ base-x (* width (/ i max-history)))
-                  (+ base-y (* (math/scale v min-v max-v height 0)))))
-
-(defn draw-history [context subject-key base-x base-y width height max-history]
+(defn draw-history [ctx subject-key base-x base-y width height max-history]
   (doseq [prop-tuple (get @history subject-key)
           :let [prop-key (nth prop-tuple 0)
                 values (nth prop-tuple 1)
                 n-values (count values)
                 min-v (get-in @history-min [subject-key prop-key])
-                max-v (get-in @history-max [subject-key prop-key])]]
-    (canvas/beginPath! context)
-    (canvas/strokeStyle! context (color/hsl (mod (hash (name prop-key)) 360) 50 50))
-    (canvas/moveTo! context base-x (+ base-y (* (math/scale (nth values 0) min-v max-v height 0))))
-    (reset! counter 1)
-    (while (< @counter n-values)
-      (draw-seg @counter (nth values @counter) context base-x base-y width height min-v max-v max-history)
-      (swap! counter inc))
-    (canvas/stroke! context))
-  context)
+                max-v (get-in @history-max [subject-key prop-key])
+                v-range (- max-v min-v)
+                i (atom 1)]]
+    (when (> n-values 1)
+      (canvas/beginPath! ctx)
+      (canvas/strokeStyle! ctx (color/hsl (mod (hash (name prop-key)) 360) 50 50))
+      (canvas/moveTo! ctx
+                      (+ base-x width)
+                      (+ base-y (* height (- 1 (/ (- (nth values 0) min-v) v-range)))))
+      (while (< @i n-values)
+             (canvas/lineTo! ctx
+                             (+ base-x (* width (- 1 (/ @i n-values))))
+                             (+ base-y (* height (- 1 (/ (- (nth values @i) min-v) v-range)))))
+             (swap! i inc))
+      (canvas/stroke! ctx)))
+  ctx)
 
-(defn draw-player [context state player index player-count width height]
-  (let [pad 5.5
-        w (- (/ width columns) pad)
+(defn draw-player [state text-context line-context player index player-count width height]
+  (let [w (/ width columns)
         h player-height
         x (+ pad (* (mod index columns) w))
         y (+ (* (int (/ index columns)) h) pad orchestra-height)
         opacity (min 1 (* 10 (:volume player)))
         c (:color player)]
-    (-> context
+    (-> line-context
+      (canvas/globalAlpha! opacity)
+      (draw-history (:index player) (+ (* 150 dpi) x) y (- w (* 150 dpi)) h 1000))
+    (-> text-context
         (canvas/globalAlpha! opacity)
         (stroke-box c x y w h)
         (canvas/fillStyle! c)
-        (canvas/font! "36px Futura")
-        (canvas/fillText! (str (:index player) " " (get-name player)) (+ x pad) (+ y 35))
-        (begin-stack! (+ x pad) (+ y 65) "24px Futura")
+        (canvas/font! (str (* 18 dpi) "px Futura"))
+        (canvas/fillText! (str (:index player) " " (get-name player)) (+ x pad) (+ y (* 16 dpi)))
+        (begin-stack! (+ x pad) (+ y (* 32 dpi)) (str (* 12 dpi) "px Futura"))
         (stack-fillStyle! (color/hsl (mod (hash "position") 360) 50 50))
         (stack-text! (str "Position " (math/to-precision (:position player) 2)))
-        (stack-fillStyle! (color/hsl (mod (hash "upcoming-note") 360) 50 50))
-        (stack-text! (str "Upcoming Note " (:upcoming-note player)))
-        (stack-fillStyle! (color/hsl (mod (hash "volume") 360) 50 50))
-        (stack-text! (str "Volume " (math/to-precision (:volume player) 2)))
-        (stack-fillStyle! c)
+        (stack-fillStyle! (color/hsl (mod (hash "current-pitch") 360) 50 50))
         (stack-text! (str "Current Pitch " (math/to-precision (:current-pitch player) 3)))
+        (stack-fillStyle! c)
+        (stack-text! (str "Upcoming Note " (:upcoming-note player)))
+        (stack-text! (str "Volume " (math/to-precision (:volume player) 2)))
         (stack-text! (str "Scale " (:scale player)))
         (stack-text! (str "Transposition " (:transposition player)))
         (end-stack!)
-        (draw-dying! player (+ x w -70) (+ 30 y) (get-in state [:orchestra :velocity]))
-        (draw-history (:index player) (+ 300 x) y (- w 300) h 2500))))
+        (draw-dying! player (+ x w (* -36 dpi)) (+ (* 16 dpi) y) (get-in state [:orchestra :velocity])))))
 
-(defn render-players [context state]
+(defn render-players [state text-context line-context]
   (let [all-players (:players state)
         player-count (count all-players)
-        w (:width state)
+        w (- (:width state) (* 2 pad))
         h (:height state)]
     (loop [players all-players index 0]
-      (if (empty? players)
-        context
-        (do
-          (draw-player context state (first players) index player-count w h)
-          (recur (rest players) (inc index)))))))
+      (when-not (empty? players)
+        (draw-player state text-context line-context (first players) index player-count w h)
+        (recur (rest players) (inc index))))))
 
-(defn render-orchestra [context state]
-  (let [width (:width state)]
-    (-> context
+(defn render-orchestra [state text-context line-context]
+  (let [width (- (:width state) (* 2 pad))]
+    (-> line-context
       (canvas/globalAlpha! 1)
-      (stroke-box "#FFF" 5.5 5.5 (- (:width state) 16.5) orchestra-height)
+      (draw-history :orchestra (+ (* 120 dpi) pad) pad (- width (* 120 dpi)) orchestra-height 12000))
+    (-> text-context
+      (canvas/globalAlpha! 1)
+      (stroke-box "#FFF" pad pad width orchestra-height)
       (canvas/fillStyle! "#FFF")
-      (canvas/font! "36px Futura")
-      (canvas/fillText! "Orchestra" 11 40)
-      (begin-stack! 11 65.5 "24px Futura")
+      (canvas/font! (str (* 18 dpi) "px Futura"))
+      (canvas/fillText! "Orchestra" (* 2 pad) (* 20 dpi))
+      (begin-stack! (* 2 pad) (+ pad (* 32 dpi)) (str (* 12 dpi) "px Futura"))
       (stack-fillStyle! (color/hsl (mod (hash "velocity") 360) 50 50))
       (stack-text! (str "Velocity " (math/to-precision (get-in state [:orchestra :velocity]) 4)))
       (stack-fillStyle! (color/hsl (mod (hash "scaled-velocity") 360) 50 50))
@@ -137,11 +136,10 @@
       (stack-text! (str "Wall Time " (math/to-precision (get-in state [:engine :wall-time]) 2)))
       (stack-text! (str "Time " (math/to-precision (get-in state [:engine :time]) 2)))
       (stack-text! (str "Count " (get-in state [:engine :count])))
-      (end-stack!)
-      (draw-history :orchestra 300.5 5.5 (- width 310.5) orchestra-height 10000))))
+      (end-stack!))))
 
-(defn render! [state context]
-  (-> context
-      (canvas/clear!)
-      (render-players state)
-      (render-orchestra state)))
+(defn render! [state text-context line-context]
+  (canvas/clear! text-context)
+  (canvas/clear! line-context)
+  (render-players state text-context line-context)
+  (render-orchestra state text-context line-context))

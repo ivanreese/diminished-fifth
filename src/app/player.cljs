@@ -40,8 +40,8 @@
     (swap! history dissoc (:index player)))
   player)
 
-(defn add-history [player key value]
-  (when (odd? (get-in @state [:engine :count]))
+(defn add-history [player key value skip]
+  (when (zero? (mod (get-in @state [:engine :count]) skip))
     (let [value (or value 0)]
       (swap! history update-in [(:index player) key] conj value)
       (if (nil? (get-in @history-min [(:index player) key]))
@@ -52,8 +52,8 @@
         (swap! history-max update-in [(:index player) key] max value))))
   player)
 
-(defn add-history-prop [player key]
-  (add-history player key (key player)))
+(defn add-history-prop [player key skip]
+  (add-history player key (key player) skip))
 
 (defn init-history [index key]
   (swap! history assoc-in [index key] [])
@@ -87,7 +87,7 @@
         position (+ (:position player) velocity)
         raw-position (+ (:raw-position player) velocity)]
     (-> player
-      (add-history :position raw-position)
+      (add-history :position raw-position 6)
       (assoc :position position)
       (assoc :raw-position raw-position))))
 
@@ -99,15 +99,15 @@
              (<= (:transposition player) min-transposition)
              (>= (:transposition player) max-transposition))))
 
-(defn update-volume [player dt]
+(defn update-volume [player dt velocity]
   (let [volume (math/clip
                 (if (:dying player)
                   (- (:volume player)
-                     (* dt fade-rate))
+                     (* dt (+ 0.5 (/ velocity 2)) fade-rate))
                   (+ (:volume player)
-                     (* dt fade-rate))))]
+                     (* dt (+ 0.5 (/ velocity 2)) fade-rate))))]
     (-> player
-      (add-history :volume volume)
+      (add-history :volume volume 30)
       (assoc :volume volume))))
 
 (defn update-alive [player]
@@ -159,10 +159,10 @@
         sample-index (mod index (count @samples))
         position (get-sync-position reference-player)
         upcoming-note (determine-starting-note melody-index position)]
-    (init-history index :upcoming-note)
+    ; (init-history index :upcoming-note)
     (init-history index :current-pitch)
     (init-history index :position)
-    (init-history index :volume)
+    ; (init-history index :volume)
     {:index index
      :melody-index melody-index
      :sample (nth @samples sample-index)
@@ -175,17 +175,16 @@
      :volume (if (zero? index) 1 0)
      :alive true ; When we die, we'll get filtered out of the list of players
      :dying false
-     :color (color/hsl (mod (* index 27) 360) 50 70)}))
+     :color (color/hsl (mod (* index 11) 360) 70 70)}))
 
 (defn tick [player dt velocity key-transposition]
   (-> player
       (update-position dt velocity)
       (update-dying dt velocity)
-      (update-volume dt)
+      (update-volume dt velocity)
       (update-alive)
       (update-played-note key-transposition)
-      (add-history-prop :upcoming-note)
-      (add-history-prop :current-pitch)
+      (add-history-prop :current-pitch 2)
       (trim-history)))
 
 (defn rescale [player factor]

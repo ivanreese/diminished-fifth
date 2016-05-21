@@ -22,8 +22,8 @@
 ; HISTORY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn add-history [state key value]
-  (when (odd? (get-in state [:engine :count]))
+(defn add-history [state key value skip]
+  (when (zero? (mod (get-in state [:engine :count]) skip))
     (let [value (or value 0)]
       (swap! history update-in [:orchestra key] conj value)
       (swap! history-min update-in [:orchestra key] min value)
@@ -41,8 +41,7 @@
 
 (defn advance-velocity [state dt time]
   (let [velocity (math/scale (math/pow (math/sin (/ time velocity-cycle-time)) 3) -1 1 min-velocity max-velocity)]
-    (add-history state :velocity velocity)
-    (add-history state :scaled-velocity (* velocity (get-in state [:orchestra :scale])))
+    (add-history state :scaled-velocity (* velocity (get-in state [:orchestra :scale])) 30)
     (assoc-in state [:orchestra :velocity] velocity)))
 
 (defn rescale-players [players factor]
@@ -111,8 +110,9 @@
 (defn key-change [state time]
   (-> state
     (assoc-in [:orchestra :key-change-time] (next-key-change-time time))
-    (update-in [:orchestra :transposition] update-transposition)))
-
+    (update-in [:orchestra :transposition] update-transposition)
+    (add-history :transposition (get-in state [:orchestra :transposition]) 1)))
+    
 (defn check-key-change [state time]
   (if (>= time (get-in state [:orchestra :key-change-time]))
     (key-change state time)
@@ -142,9 +142,10 @@
 
 
 (defn init [state time]
-  (init-history :velocity)
+  (init-history :transposition)
   (init-history :scaled-velocity)
   (-> state
+      (add-history :transposition 1 1)
       (assoc :players [])
       (assoc :orchestra {:key-change-time   (next-key-change-time time)
                          :next-player-index 0 ;715;(int (math/random 0 1000))
