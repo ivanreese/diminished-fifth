@@ -176,7 +176,7 @@
      :volume (if (zero? index) 1 0)
      :alive true ; When we die, we'll get filtered out of the list of players
      :dying false
-     :color (color/hsl (mod (* index 11) 360) 70 70)}))
+     :color (color/hsl (mod (* index 11) 360) 45 70)}))
 
 (defn tick [player dt velocity key-transposition]
   (-> player

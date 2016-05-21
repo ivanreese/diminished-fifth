@@ -48,7 +48,7 @@
     (when (>= (:transposition player) player/max-transposition)
       (canvas/fillText! ctx "max-transposition" (- x (* dpi 63)) (+ y (* dpi 15))))
     (when (> (* velocity (:scale player)) player/max-velocity)
-      (canvas/fillText! ctx "max-velocity" (- x (* 15 dpi)) (+ y (* 30 dpi)))))
+      (canvas/fillText! ctx "max-velocity" (- x (* 35 dpi)) (+ y (* 30 dpi)))))
   ctx)
   
 (defn draw-history [ctx subject-key base-x base-y width height max-history]
