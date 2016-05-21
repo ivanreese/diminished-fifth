@@ -2,8 +2,9 @@
   (:require [app.audio :as audio]
             [app.color :as color]
             [app.math :as math]
-            [app.state :refer [melodies samples]]
-            [app.util :refer [log]]))
+            [app.state :refer [melodies samples history]]
+            [app.util :refer [log]]
+            [cljs.pprint :refer [pprint]]))
 
 (def fade-rate 0.01)
 (def transpose-on-repeat 2)
@@ -14,7 +15,29 @@
 (def max-velocity 16)
 
 
+;; HISTORY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+(defn trim-history-prop [m k v]
+  (assoc m k (if (> (count v) 10000) (drop-last 1 v) v)))
+
+(defn trim-history-all-props [history]
+  (reduce-kv trim-history-prop {} history))
+
+(defn trim-history [player]
+  (if (:alive player)
+    (swap! history update (:index player) trim-history-all-props)
+    (swap! history dissoc (:index player)))
+  player)
+
+(defn add-history [player key value]
+  (swap! history update-in [(:index player) key] conj value)
+  player)
+
+(defn add-history-prop [player key]
+  (add-history player key (key player)))
+
+;; ASSETS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defn get-note-at-index [melody index]
@@ -31,7 +54,7 @@
                      (:next-note player)))
 
 
-
+;; MAKE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defn get-sync-position [reference-player]
@@ -50,13 +73,17 @@
     (or next-note-index 0)))
 
 
-
+;; UPDATES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defn update-position [player dt velocity]
-  (let [position (+ (:position player)
-                    (* velocity dt (:scale player)))]
-    (assoc player :position position)))
+  (let [velocity (* velocity dt (:scale player))
+        position (+ (:position player) velocity)
+        raw-position (+ (:raw-position player) velocity)]
+    (-> player
+      (add-history :position raw-position)
+      (assoc :position position)
+      (assoc :raw-position raw-position))))
 
 (defn update-dying [player dt velocity]
   (assoc player :dying
@@ -66,14 +93,16 @@
              (<= (:transposition player) min-transposition)
              (>= (:transposition player) max-transposition))))
 
-(defn update-volume [player dt]
-  (assoc player :volume
-         (math/clip
-           (if (:dying player)
-             (- (:volume player)
-                (* dt fade-rate))
-             (+ (:volume player)
-                (* dt fade-rate))))))
+(defn update-volume [player dt velocity]
+  (let [volume (math/clip
+                (if (:dying player)
+                  (- (:volume player)
+                     (* dt velocity fade-rate))
+                  (+ (:volume player)
+                     (* dt velocity fade-rate))))]
+    (-> player
+      (add-history :volume volume)
+      (assoc :volume volume))))
 
 (defn update-alive [player]
   (assoc player :alive
@@ -89,6 +118,7 @@
         notes (:notes melody)
         duration (:duration melody)
         next-note (inc (:next-note player))]
+    (add-history player :next-note next-note)
     (if (< next-note (count notes))
       (assoc player :next-note next-note)
       (-> player
@@ -124,21 +154,24 @@
      :melody-index melody-index
      :sample (nth @samples sample-index)
      :position position ; The current time we're at in the pattern, in ms
+     :raw-position position
      :next-note (determine-starting-note melody-index position)
      :transposition initial-transposition ; Adjusted every time the track repeats by transposeOnRepeat
      :scale 1 ; Adjusted when the Orchestra rescales. Applied to incoming velocity values
      :volume (if (zero? index) 1 0)
      :alive true ; When we die, we'll get filtered out of the list of players
      :dying false
-     :color (color/random-color)}))
+     :color (color/hsl (mod (* index 27) 360) 50 70)}))
 
 (defn tick [player dt velocity key-transposition]
   (-> player
       (update-position dt velocity)
       (update-dying dt velocity)
-      (update-volume dt)
+      (update-volume dt velocity)
       (update-alive)
-      (update-played-note key-transposition)))
+      (update-played-note key-transposition)
+      (add-history-prop :next-note)
+      (trim-history)))
 
 (defn rescale [player factor]
   (update player :scale * factor))

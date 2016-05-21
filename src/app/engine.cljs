@@ -6,9 +6,11 @@
     (.requestAnimationFrame js/window tick)
     (let [last-wall-time (get-in @state [:engine :wall-time])
           wall-time (/ time-ms 1000)
-          dt (- wall-time last-wall-time)]
+          dt (- wall-time last-wall-time)
+          count (inc (get-in @state [:engine :count]))]
       (swap! state update-in [:engine :time] + dt)
       (swap! state assoc-in [:engine :wall-time] wall-time)
+      (swap! state assoc-in [:engine :count] count)
       (@callback dt))))
 
 (defn- first-tick [time-ms]
@@ -19,7 +21,9 @@
 ;; PUBLIC
 
 (defn restart [state]
-  (assoc-in state [:engine :time] 0))
+  (-> state
+    (assoc-in [:engine :time] 0)
+    (assoc-in [:engine :count] 0)))
   
 
 (defn start [state]

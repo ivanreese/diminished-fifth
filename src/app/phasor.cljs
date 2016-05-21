@@ -7,7 +7,7 @@
                                         (:max phasor))))
 
 (defn make [value min max length]
-  (-> {:min min
-       :max max
-       :length length}
-      (tick 0)))
+  (let [p {:min min
+           :max max
+           :length length}]
+    (tick p 0)))

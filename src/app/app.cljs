@@ -4,10 +4,15 @@
             [app.engine :as engine]
             [app.orchestra :as orchestra]
             [app.render :refer [render!]]
-            [app.state :refer [state melodies samples callback context]]
+            [app.state :refer [state melodies samples callback context history]]
             [cljs.core.async :refer [<!]]
             [cljs.pprint :refer [pprint]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
+
+(defonce tick-once-mode (atom false))
+
+(defn tick-once []
+  (reset! tick-once-mode (not @tick-once-mode)))
 
 (defn play []
   (swap! state engine/start))
@@ -16,6 +21,7 @@
   (swap! state engine/stop))
 
 (defn tick [dt]
+   (when @tick-once-mode (pause))
    (swap! state orchestra/tick dt (get-in @state [:engine :time]))
    (render! @state @context))
 
@@ -28,6 +34,7 @@
 
 (defn restart []
   (reset! state {:engine {:time 0}})
+  (reset! history {})
   (resize)
   (swap! state orchestra/init (get-in @state [:engine :time]))
   (play))

@@ -4,6 +4,10 @@
 ;; PROPERTY SETTERS
 
 
+(defn globalAlpha! [context value]
+  (set! (.-globalAlpha context) value)
+  context)
+
 (defn fillStyle! [context value]
   (set! (.-fillStyle context) value)
   context)
@@ -106,5 +110,4 @@
 (defn create! []
   (let [canvas (.createElement js/document "canvas")]
     (.appendChild js/document.body canvas)
-    (js/console.log canvas)
     (canvas->context canvas)))
