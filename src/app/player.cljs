@@ -49,9 +49,9 @@
 (defn get-melody-at-index [index]
   (nth @melodies index))
 
-(defn get-next-note [player]
+(defn get-upcoming-note [player]
   (get-note-at-index (get-player-melody player)
-                     (:next-note player)))
+                     (:upcoming-note player)))
 
 
 ;; MAKE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -69,8 +69,8 @@
 
 (defn determine-starting-note [melody-index player-position]
   (let [notes (:notes (get-melody-at-index melody-index))
-        next-note-index (:index (first (filter #(>= (:position %) player-position) notes)))]
-    (or next-note-index 0)))
+        upcoming-note-index (:index (first (filter #(>= (:position %) player-position) notes)))]
+    (or upcoming-note-index 0)))
 
 
 ;; UPDATES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -113,15 +113,15 @@
 ; PLAY NOTE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn update-next-note [player]
+(defn update-upcoming-note [player]
   (let [melody (get-player-melody player)
         notes (:notes melody)
         duration (:duration melody)
-        next-note (inc (:next-note player))]
-    (if (< next-note (count notes))
-      (assoc player :next-note next-note)
+        upcoming-note (inc (:upcoming-note player))]
+    (if (< upcoming-note (count notes))
+      (assoc player :upcoming-note upcoming-note)
       (-> player
-        (assoc :next-note 0)
+        (assoc :upcoming-note 0)
         (update :position - duration)
         (update :transposition * transpose-on-repeat)))))
 
@@ -132,14 +132,14 @@
                :volume (* (:volume player) (/ (:volume note) (:transposition player)))}))
 
 (defn update-played-note [player key-transposition]
-  (let [note (get-next-note player)
+  (let [note (get-upcoming-note player)
         player-pos (:position player)
         note-pos (:position note)]
     (if (< player-pos note-pos)
       player
       (do
         (play-note! player note key-transposition)
-        (update-next-note player)))))
+        (update-upcoming-note player)))))
 
 
 ;; PUBLIC ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -154,7 +154,7 @@
      :sample (nth @samples sample-index)
      :position position ; The current time we're at in the pattern, in ms
      :raw-position position
-     :next-note (determine-starting-note melody-index position)
+     :upcoming-note (determine-starting-note melody-index position)
      :transposition initial-transposition ; Adjusted every time the track repeats by transposeOnRepeat
      :scale 1 ; Adjusted when the Orchestra rescales. Applied to incoming velocity values
      :volume (if (zero? index) 1 0)
@@ -169,7 +169,7 @@
       (update-volume dt velocity)
       (update-alive)
       (update-played-note key-transposition)
-      (add-history-prop :next-note)
+      (add-history-prop :upcoming-note)
       (trim-history)))
 
 (defn rescale [player factor]

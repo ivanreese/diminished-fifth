@@ -2,6 +2,7 @@
   (:require [app.canvas :as canvas]
             [app.color :as color]
             [app.math :as math :refer [tau]]
+            [app.player :as player]
             [app.state :refer [history]]))
 
 (def orchestra-height 280)
@@ -40,10 +41,18 @@
 (defn end-stack! [stack]
   (first stack))
 
-(defn draw-dying! [context player x y]
-  (if (:dying player)
+(defn draw-dying! [context player x y velocity]
+  (when (:dying player)
     (canvas/fillText! context "Dying" x y)
-    context))
+    (when (< (* velocity (:scale player)) player/min-velocity)
+      (canvas/fillText! context "min-velocity" (- x 30) (+ y 30)))
+    (when (> (* velocity (:scale player)) player/max-velocity)
+      (canvas/fillText! context "max-velocity" (- x 30) (+ y 30)))
+    (when (<= (:transposition player) player/min-transposition)
+      (canvas/fillText! context "min-transposition" (- x 130) (+ y 60)))
+    (when (>= (:transposition player) player/max-transposition)
+      (canvas/fillText! context "max-transposition" (- x 130) (+ y 60))))
+  context)
   
 (defn draw-seg [i v context base-x base-y width height min-v max-v max-history]
   (canvas/lineTo! context
@@ -84,8 +93,8 @@
         (begin-stack! (+ x pad) (+ y 65) "24px Futura")
         (stack-fillStyle! (color/hsl (mod (hash "position") 360) 50 50))
         (stack-text! (str "Position " (math/to-precision (:position player) 2)))
-        (stack-fillStyle! (color/hsl (mod (hash "next-note") 360) 50 50))
-        (stack-text! (str "Next note " (:next-note player)))
+        (stack-fillStyle! (color/hsl (mod (hash "upcoming-note") 360) 50 50))
+        (stack-text! (str "Upcoming Note " (:upcoming-note player)))
         (stack-fillStyle! (color/hsl (mod (hash "volume") 360) 50 50))
         (stack-text! (str "Volume " (math/to-precision (:volume player) 2)))
         (stack-fillStyle! c)
@@ -93,7 +102,7 @@
         (stack-text! (str "Scale " (:scale player)))
         (stack-text! (str "Transposition " (:transposition player)))
         (end-stack!)
-        (draw-dying! player (+ x w -70) (+ 30 y))
+        (draw-dying! player (+ x w -70) (+ 30 y) (get-in state [:orchestra :playback-rate]))
         (draw-history (:index player) (+ 300 x) y (- w 300) h 5000))))
 
 (defn render-players [context state]
