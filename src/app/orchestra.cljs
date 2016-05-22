@@ -16,7 +16,8 @@
 (def key-change-time (span/make 120 120)) ;(span/make 60 600))
 (def min-velocity 0)
 (def max-velocity 2)
-(def velocity-cycle-time 30)
+(def velocity-pos-scale 1)
+(def velocity-cycle-time 60)
 
 
 ; HISTORY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -40,9 +41,10 @@
 
 
 (defn advance-velocity [state dt time]
-  (let [velocity (math/scale (math/pow (math/sin (/ time velocity-cycle-time)) 3) -1 1 min-velocity max-velocity)]
-    (add-history state :velocity velocity 30)
-    (assoc-in state [:orchestra :velocity] velocity)))
+  (let [velocity (math/scale (math/pow (math/sin (/ time velocity-cycle-time)) 3) -1 1 min-velocity max-velocity)
+        scaled-velocity (if (> velocity 1) (* (/ time 1200) velocity) velocity)]
+    (add-history state :velocity scaled-velocity 30)
+    (assoc-in state [:orchestra :velocity] scaled-velocity)))
 
 (defn rescale-players [players factor]
   (mapv #(player/rescale % factor) players))
