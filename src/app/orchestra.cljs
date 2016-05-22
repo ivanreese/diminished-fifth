@@ -13,11 +13,11 @@
 (def min-players 1)
 (def max-players 18)
 (def spawn-time (span/make 6 6)) ;(span/make 4 9))
-(def key-change-time (span/make 120 120)) ;(span/make 60 600))
+(def key-change-time (span/make 240 240)) ;(span/make 60 600))
 (def min-velocity 0)
 (def max-velocity 2)
 (def velocity-pos-scale 1)
-(def velocity-cycle-time 60)
+(def velocity-cycle-time 90)
 
 
 ; HISTORY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

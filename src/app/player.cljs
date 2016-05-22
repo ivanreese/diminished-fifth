@@ -172,7 +172,7 @@
      :upcoming-note upcoming-note
      :current-pitch (* initial-transposition (:pitch upcoming-note))
      :transposition initial-transposition ; Adjusted every time the track repeats by transposeOnRepeat
-     :scale (math/clip (math/pow 2 (math/round (math/log2 (/ 1 velocity)))) (/ 1 32) 32)
+     :scale (math/clip (math/pow 2 (math/round (math/log2 (/ 1 velocity)))) (/ 1 32) 8)
      :volume (if (zero? index) 1 0)
      :alive true ; When we die, we'll get filtered out of the list of players
      :dying false
