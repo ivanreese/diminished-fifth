@@ -132,7 +132,7 @@
         (update :transposition * transpose-on-repeat)))))
 
 (defn play-note! [player note pitch]
-  (if (> 8 pitch (/ 1 8))
+  (if (> 32 pitch (/ 1 8))
     (audio/play (:sample player)
                 {:pos (- (:position player) (:position note))
                  :pitch pitch

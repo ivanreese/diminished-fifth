@@ -42,7 +42,7 @@
 
 (defn advance-velocity [state dt time]
   (let [velocity (math/scale (math/pow (math/sin (/ time velocity-cycle-time)) 3) -1 1 min-velocity max-velocity)
-        scaled-velocity (if (> velocity 1) (* (/ time 1200) velocity) velocity)]
+        scaled-velocity (max (* (+ 1 (/ time 1200)) velocity) velocity)]
     (add-history state :velocity scaled-velocity 30)
     (assoc-in state [:orchestra :velocity] scaled-velocity)))
 
