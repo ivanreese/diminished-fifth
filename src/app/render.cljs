@@ -125,10 +125,9 @@
       (stack-fillStyle! (color/hsl (mod (hash "velocity") 360) 70 70))
       (stack-text! (str "Velocity " (math/to-precision (get-in state [:orchestra :velocity]) 4)))
       (stack-fillStyle! "#FFF")
-      (stack-text! (str "Transposition " (math/to-precision (get-in state [:orchestra :transposition]) 4)))
-      (stack-text! (str "Wall Time " (math/to-precision (get-in state [:engine :wall-time]) 2)))
       (stack-text! (str "Time " (math/to-precision (get-in state [:engine :time]) 2)))
       (stack-text! (str "Count " (get-in state [:engine :count])))
+      (stack-text! (str "Transposition " (math/to-precision (get-in state [:orchestra :transposition]) 4)))
       (end-stack!)
       (draw-history :orchestra (+ (* 120 dpi) pad) pad (- width (* 120 dpi)) height 12000))))
 
