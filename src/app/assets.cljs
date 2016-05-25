@@ -60,7 +60,7 @@
 (defn load-assets [manifest type loader-fn]
   (go
    (->> (get manifest type)
-        (map #(str "/" type "/" %))
+        (map #(str type "/" %))
         (map-indexed loader-fn)
         (async/merge)
         (async/into [])

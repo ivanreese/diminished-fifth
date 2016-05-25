@@ -1,5 +1,5 @@
 (ns app.engine
-  (:require [app.state :refer [state callback]]))
+  (:require [app.state :refer [state]]))
 
 (defn- tick [time-ms]
   (when (get-in @state [:engine :running])
@@ -11,7 +11,7 @@
       (swap! state update-in [:engine :time] + dt)
       (swap! state assoc-in [:engine :wall-time] wall-time)
       (swap! state assoc-in [:engine :count] count)
-      (@callback dt))))
+      ((get-in @state [:engine :callback]) dt))))
 
 (defn- first-tick [time-ms]
   (.requestAnimationFrame js/window tick)
@@ -20,10 +20,11 @@
   
 ;; PUBLIC
 
-(defn restart [state]
+(defn restart [state callback]
   (-> state
     (assoc-in [:engine :time] 0)
-    (assoc-in [:engine :count] 0)))
+    (assoc-in [:engine :count] 0)
+    (assoc-in [:engine :callback] callback)))
   
 
 (defn start [state]

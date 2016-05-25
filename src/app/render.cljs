@@ -14,7 +14,7 @@
   (-> player
       :sample
       :name
-      (clojure.string/replace "/samples/" "")
+      (clojure.string/replace "samples/" "")
       (clojure.string/replace ".mp3" "")))
 
 (defn stroke-box [ctx c x y w h]

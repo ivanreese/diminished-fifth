@@ -43,7 +43,7 @@
   (reset! state {})
   (reset! history {})
   (resize)
-  (swap! state engine/restart)
+  (swap! state engine/restart tick)
   (swap! state orchestra/init (get-in @state [:engine :time]))
   (render! @state @text-context))
 
@@ -64,7 +64,7 @@
 
 (defn init []
   (go
-    (let [manifest (<! (ajax-channel "/manifest.json"))]
+    (let [manifest (<! (ajax-channel "manifest.json"))]
       (reset! melodies (<! (load-assets manifest "melodies" melody-loader)))
       (reset! samples (<! (load-assets manifest "samples" sample-loader)))
       (reset! text-context (canvas/create!))
@@ -79,5 +79,3 @@
       (restart))))
 
 (defonce initialized (do (init) true))
-
-(reset! callback tick)
