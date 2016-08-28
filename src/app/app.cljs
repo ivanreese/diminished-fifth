@@ -11,6 +11,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defonce tick-once-mode (atom false))
+(defonce toggle-gui-mode (atom true))
 
 (defn tick-once []
   (let [mode (not @tick-once-mode)
@@ -19,6 +20,15 @@
     (if mode
       (.setAttribute btn "active" true)
       (.removeAttribute btn "active"))))
+
+(defn toggle-gui []
+  (let [mode (not @toggle-gui-mode)
+        btn (js/document.querySelector ".toggle-gui.button")]
+    (reset! toggle-gui-mode mode)
+    (render! @state @text-context)
+    (if mode
+      (.removeAttribute btn "active")
+      (.setAttribute btn "active" true))))
 
 (defn play []
   (swap! state engine/start))
@@ -29,7 +39,8 @@
 (defn tick [dt]
   (when @tick-once-mode (pause))
   (swap! state orchestra/tick dt (get-in @state [:engine :time]))
-  (render! @state @text-context))
+  (when @toggle-gui-mode
+    (render! @state @text-context)))
 
 (defn resize [& args]
   (let [w (.-innerWidth js/window)
@@ -73,6 +84,7 @@
       (setup-button "pause" pause)
       (setup-button "restart" restart)
       (setup-button "tick-once" tick-once)
+      (setup-button "toggle-gui" toggle-gui)
       (setup-button "fullscreen" fullscreen)
       (setup-button "sound-check" sound-check)
       (resize)
