@@ -25,7 +25,7 @@
              ; lein figwheel
              :dev {:cljsbuild {:builds {:main {:source-paths ["dev"]
                                                :figwheel true
-                                               :compiler {:main 'dev.dev
+                                               :compiler {:main "dev.dev"
                                                           :asset-path "scripts"
                                                           :optimizations :none
                                                           :source-map-timestamp true}}}}}
