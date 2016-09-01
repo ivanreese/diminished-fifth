@@ -1,19 +1,21 @@
 (ns app.audio)
 
-
+(defonce audio-context (atom nil))
+(defonce sample-rate (atom nil))
+(defonce master (atom nil))
 
 (defn make-impulse [n length decay]
   (* (- 1 (* 2 (.random js/Math)))
      (.pow js/Math (- 1 (/ n length)) decay)))
 
 (defn make-reverb [seconds decay reverse]
-  (let [wet (.createGain audio-context)
-        dry (.createGain audio-context)
-        input (.createGain audio-context)
-        output (.createGain audio-context)
-        convolver (.createConvolver audio-context)
-        length (* sample-rate seconds)
-        impulse (.createBuffer audio-context 2 length sample-rate)
+  (let [wet (.createGain @audio-context)
+        dry (.createGain @audio-context)
+        input (.createGain @audio-context)
+        output (.createGain @audio-context)
+        convolver (.createConvolver @audio-context)
+        length (* @sample-rate seconds)
+        impulse (.createBuffer @audio-context 2 length @sample-rate)
         impulseL (.getChannelData impulse 0)
         impulseR (.getChannelData impulse 1)]
     (doseq [i (range length)]
@@ -35,19 +37,19 @@
 ;; PUBLIC
 
 (defn setup []
-  (defonce audio-context (let [AC (or (.-AudioContext js/window)
-                                      (.-webkitAudioContext js/window))]
+  (reset! audio-context (let [AC (or (.-AudioContext js/window)
+                                     (.-webkitAudioContext js/window))]
                            (AC.)))
-
-  (defonce sample-rate (.-sampleRate audio-context))
   
-  (defonce master
-    (let [input (.createGain audio-context)
-          analyser (.createAnalyser audio-context)
+  (reset! sample-rate (.-sampleRate @audio-context))
+  
+  (reset! master
+    (let [input (.createGain @audio-context)
+          analyser (.createAnalyser @audio-context)
           reverb (make-reverb 2.5, 3.5, false)
-          soft-compressor (.createDynamicsCompressor audio-context)
-          hard-compressor (.createDynamicsCompressor audio-context)
-          output (.createGain audio-context)]
+          soft-compressor (.createDynamicsCompressor @audio-context)
+          hard-compressor (.createDynamicsCompressor @audio-context)
+          output (.createGain @audio-context)]
       (aset input "gain" "value" 1)
       (aset (:wet reverb) "value" 0.3)
       (aset (:dry reverb) "value" 1)
@@ -67,16 +69,20 @@
       (.connect (:output reverb) soft-compressor)
       (.connect soft-compressor hard-compressor)
       (.connect hard-compressor output)
-      (.connect output (.-destination audio-context))
+      (.connect output (.-destination @audio-context))
       {:input input
        :analyser analyser})))
 
+(defn decode [data cb]
+  (.decodeAudioData @audio-context data cb))
+
+
 (defn play [sample note]
-  (let [source (.createBufferSource audio-context) ;; We don't need a ref to this — it is GC'd when sample playback ends
-        gain (.createGain audio-context)] ; This will be GC'd too when sample playback ends
+  (let [source (.createBufferSource @audio-context) ;; We don't need a ref to this — it is GC'd when sample playback ends
+        gain (.createGain @audio-context)] ; This will be GC'd too when sample playback ends
     (aset source "buffer" (:buffer sample))
     (aset source "playbackRate" "value" (:pitch note))
     (aset gain "gain" "value" (:volume note))
     (.connect source gain)
-    (.connect gain (:input master))
+    (.connect gain (:input @master))
     (.start source (:pos note))))

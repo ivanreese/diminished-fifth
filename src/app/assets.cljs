@@ -1,7 +1,7 @@
 (ns app.assets
   (:require [app.math :as math]
             [app.util :refer [log]]
-            [app.audio :refer [audio-context]]
+            [app.audio :as audio]
             [ajax.core :refer [GET]]
             [cljs.core.async :as async :refer [<! >! chan close!]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -35,7 +35,7 @@
    (let [decode-ch (chan)
          audio-xhr (<! (ajax-audio-channel url))
          audio-data (aget audio-xhr "target" "response")]
-     (.decodeAudioData audio-context audio-data (callback-to-channel decode-ch))
+     (audio/decode audio-data (callback-to-channel decode-ch))
      {:name url
       :index index
       :buffer (<! decode-ch)})))
