@@ -12,7 +12,8 @@
   :hooks [leiningen.cljsbuild]
   
   :figwheel {:css-dirs ["resources/public/styles"]
-             :server-port 3000}
+             :server-port 3000
+             :server-ip   "192.168.1.13"}
   
   :clean-targets ^{:protect false} ["resources/public/scripts"]
   

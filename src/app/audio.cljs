@@ -1,13 +1,5 @@
 (ns app.audio)
 
-(defonce audio-context (let [AC (or (.-AudioContext js/window)
-                                    (.-webkitAudioContext js/window))]
-                         (AC.)))
-
-(defonce sample-rate (.-sampleRate audio-context))
-
-
-
 
 
 (defn make-impulse [n length decay]
@@ -40,40 +32,44 @@
      :dry dry.gain}))
 
 
-
-
-
-(defonce master
-  (let [input (.createGain audio-context)
-        analyser (.createAnalyser audio-context)
-        reverb (make-reverb 2.5, 3.5, false)
-        soft-compressor (.createDynamicsCompressor audio-context)
-        hard-compressor (.createDynamicsCompressor audio-context)
-        output (.createGain audio-context)]
-    (aset input "gain" "value" 1)
-    (aset (:wet reverb) "value" 0.3)
-    (aset (:dry reverb) "value" 1)
-    (aset soft-compressor "attack" "value" 0.05)
-    (aset soft-compressor "knee" "value" 10)
-    (aset soft-compressor "ratio" "value" 20)
-    (aset soft-compressor "release" "value" 0.05)
-    (aset soft-compressor "threshold" "value" -36)
-    (aset hard-compressor "attack" "value" 0.003)
-    (aset hard-compressor "knee" "value" 5)
-    (aset hard-compressor "ratio" "value" 20)
-    (aset hard-compressor "release" "value" 0.01)
-    (aset hard-compressor "threshold" "value" -6)
-    (aset output "gain" "value" .66)
-    (.connect input analyser)
-    (.connect analyser (:input reverb))
-    (.connect (:output reverb) soft-compressor)
-    (.connect soft-compressor hard-compressor)
-    (.connect hard-compressor output)
-    (.connect output (.-destination audio-context))
-    {:input input
-     :analyser analyser}))
-
 ;; PUBLIC
+
+(defn setup []
+  (defonce audio-context (let [AC (or (.-AudioContext js/window)
+                                      (.-webkitAudioContext js/window))]
+                           (AC.)))
+
+  (defonce sample-rate (.-sampleRate audio-context))
+  
+  (defonce master
+    (let [input (.createGain audio-context)
+          analyser (.createAnalyser audio-context)
+          reverb (make-reverb 2.5, 3.5, false)
+          soft-compressor (.createDynamicsCompressor audio-context)
+          hard-compressor (.createDynamicsCompressor audio-context)
+          output (.createGain audio-context)]
+      (aset input "gain" "value" 1)
+      (aset (:wet reverb) "value" 0.3)
+      (aset (:dry reverb) "value" 1)
+      (aset soft-compressor "attack" "value" 0.05)
+      (aset soft-compressor "knee" "value" 10)
+      (aset soft-compressor "ratio" "value" 20)
+      (aset soft-compressor "release" "value" 0.05)
+      (aset soft-compressor "threshold" "value" -36)
+      (aset hard-compressor "attack" "value" 0.003)
+      (aset hard-compressor "knee" "value" 5)
+      (aset hard-compressor "ratio" "value" 20)
+      (aset hard-compressor "release" "value" 0.01)
+      (aset hard-compressor "threshold" "value" -6)
+      (aset output "gain" "value" .66)
+      (.connect input analyser)
+      (.connect analyser (:input reverb))
+      (.connect (:output reverb) soft-compressor)
+      (.connect soft-compressor hard-compressor)
+      (.connect hard-compressor output)
+      (.connect output (.-destination audio-context))
+      {:input input
+       :analyser analyser})))
 
 (defn play [sample note]
   (let [source (.createBufferSource audio-context) ;; We don't need a ref to this — it is GC'd when sample playback ends

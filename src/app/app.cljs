@@ -74,12 +74,18 @@
                      callback))
 
 (defn init []
+  (js/window.removeEventListener "mousedown" init)
+  (js/window.removeEventListener "touchstart" init)
+  (audio/setup)
+  (set! (.-textContent (js/document.querySelector ".preload")) "Loading Audio Files")
   (go
     (let [manifest (<! (ajax-channel "manifest.json"))]
       (reset! melodies (<! (load-assets manifest "melodies" melody-loader)))
       (reset! samples (<! (load-assets manifest "samples" sample-loader)))
       (reset! text-context (canvas/create!))
       (js/window.addEventListener "resize" resize)
+      (.setAttribute (js/document.querySelector ".preload") "hide", "")
+      (.removeAttribute (js/document.querySelector ".buttons") "hide")
       (setup-button "play" play)
       (setup-button "pause" pause)
       (setup-button "restart" restart)
@@ -90,4 +96,8 @@
       (resize)
       (restart))))
 
-(defonce initialized (do (init) true))
+(defn preload []
+  (js/window.addEventListener "mousedown" init)
+  (js/window.addEventListener "touchstart" init))
+
+(defonce initialized (do (preload) true))

@@ -6,7 +6,7 @@ html, body, canvas {
 }
 
 html {
-  font-family: "Futura";
+  font-family: "Futura", sans-serif;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -15,6 +15,7 @@ html {
 
 body {
   margin: 0;
+  background: #24282e;
 }
 
 canvas {
@@ -24,16 +25,29 @@ canvas {
   background: #24282e;
 }
 
-.buttons {
-  display: flex;
+.preload {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  font-size: 2em;
+  top: calc(50% - 2em);
+  width: 100%;
+  text-align: center;
+  color: white;
+}
+
+.buttons {
+  position: absolute;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-end;
+  width: 100%;
+  padding: 12px;
+  padding-left: 6em;
   z-index: 10;
 }
 
 .button {
   margin-left: -1px;
+  margin-bottom: .6em;
   padding: .45em .8em .3em;
   color: #AAA;
   border: 1px solid currentColor;
@@ -48,4 +62,8 @@ canvas {
 
 .button[active] {
   background: #555;
+}
+
+[hide] {
+  display: none;
 }
