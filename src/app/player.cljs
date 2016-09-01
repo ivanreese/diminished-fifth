@@ -57,8 +57,8 @@
 
 (defn init-history [index key]
   (swap! history assoc-in [index key] [])
-  (swap! history-min assoc-in [index key Infinity])
-  (swap! history-max assoc-in [index key -Infinity]))
+  (swap! history-min assoc-in [index key] Infinity)
+  (swap! history-max assoc-in [index key] -Infinity))
 
 ;; MAKE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

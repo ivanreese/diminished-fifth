@@ -8,6 +8,7 @@
 (def dpi 1)
 (def pad (- (* 8 dpi) 0.5))
 (def columns (atom 3))
+(def scale (atom 1))
 (def rows 7) ; Including the orchestra row
 
 (defn get-name [player]
@@ -33,7 +34,7 @@
         x (nth stack 1)
         y (nth stack 2)]
     (canvas/fillText! ctx text x y)
-    (assoc stack 2 (+ y (* dpi 15)))))
+    (assoc stack 2 (+ y (* dpi 15 @scale)))))
 
 (defn stack-fillStyle! [stack style]
   (canvas/fillStyle! (nth stack 0) style)
@@ -46,9 +47,9 @@
   (when (:dying player)
     (canvas/fillText! ctx "Dying" x y)
     (when (>= (:transposition player) player/max-transposition)
-      (canvas/fillText! ctx "max-transposition" (- x (* dpi 63)) (+ y (* dpi 15))))
+      (canvas/fillText! ctx "max-transposition" (- x (* dpi 63 @scale)) (+ y (* dpi 15 @scale))))
     (when (> (* velocity (:scale player)) player/max-velocity)
-      (canvas/fillText! ctx "max-velocity" (- x (* 35 dpi)) (+ y (* 30 dpi)))))
+      (canvas/fillText! ctx "max-velocity" (- x (* 35 dpi @scale)) (+ y (* 30 dpi @scale)))))
   ctx)
   
 (defn draw-history [ctx subject-key base-x base-y width height max-history]
@@ -85,9 +86,9 @@
       (canvas/globalAlpha! opacity)
       (stroke-box c x y w h)
       (canvas/fillStyle! c)
-      (canvas/font! (str (* 18 dpi) "px Futura"))
-      (canvas/fillText! (str (:index player) " " (get-name player)) (+ x pad) (+ y pad (* 16 dpi)))
-      (begin-stack! (+ x pad) (+ y pad (* 32 dpi)) (str (* 12 dpi) "px Futura"))
+      (canvas/font! (str (* 18 dpi @scale) "px Futura"))
+      (canvas/fillText! (str (:index player) " " (get-name player)) (+ x pad) (+ y pad (* 16 dpi @scale)))
+      (begin-stack! (+ x pad) (+ y pad (* 32 dpi @scale)) (str (* 12 dpi @scale) "px Futura"))
       (stack-fillStyle! (color/hsl (mod (hash "position") 360) 70 70))
       (stack-text! (str "Position " (math/to-precision (:position player) 2)))
       (stack-fillStyle! (color/hsl (mod (hash "current-pitch") 360) 70 70))
@@ -99,8 +100,8 @@
       (stack-text! (str "Scale " (:scale player)))
       (stack-text! (str "Transposition " (:transposition player)))
       (end-stack!)
-      (draw-dying! player (+ x w (* -36 dpi)) (+ (* 16 dpi) y) (get-in state [:orchestra :velocity]))
-      (draw-history (:index player) (+ (* 150 dpi) x) y (- w (* 150 dpi)) h 1000))))
+      (draw-dying! player (+ x w (* -36 dpi @scale)) (+ (* 16 dpi @scale) y) (get-in state [:orchestra :velocity]))
+      (draw-history (:index player) (+ (* 150 dpi @scale) x) y (- w (* 150 dpi @scale)) h 1000))))
 
 (defn render-players [state context]
   (let [all-players (:players state)
@@ -119,9 +120,9 @@
       (canvas/globalAlpha! 1)
       (stroke-box "#FFF" pad pad width height)
       (canvas/fillStyle! "#FFF")
-      (canvas/font! (str (* 18 dpi) "px Futura"))
-      (canvas/fillText! "Orchestra" (* 2 pad) (+ (* 2 pad) (* 16 dpi)))
-      (begin-stack! (* 2 pad) (+ (* 2 pad) (* 32 dpi)) (str (* 12 dpi) "px Futura"))
+      (canvas/font! (str (* 18 dpi @scale) "px Futura"))
+      (canvas/fillText! "Orchestra" (* 2 pad) (+ (* 2 pad) (* 16 dpi @scale)))
+      (begin-stack! (* 2 pad) (+ (* 2 pad) (* 32 dpi @scale)) (str (* 12 dpi @scale) "px Futura"))
       (stack-fillStyle! (color/hsl (mod (hash "velocity") 360) 70 70))
       (stack-text! (str "Velocity " (math/to-precision (get-in state [:orchestra :velocity]) 4)))
       (stack-fillStyle! "#FFF")
@@ -129,9 +130,10 @@
       (stack-text! (str "Count " (get-in state [:engine :count])))
       (stack-text! (str "Transposition " (math/to-precision (get-in state [:orchestra :transposition]) 4)))
       (end-stack!)
-      (draw-history :orchestra (+ (* 120 dpi) pad) pad (- width (* 120 dpi)) height 12000))))
+      (draw-history :orchestra (+ (* 120 dpi @scale) pad) pad (- width (* 120 dpi @scale)) height 12000))))
 
 (defn resize! [w h]
+  (reset! scale (/ h 1000))
   (reset! columns (max 1 (quot w 600))))
 
 (defn render! [state context]
