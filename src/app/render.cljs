@@ -7,7 +7,7 @@
 
 (def dpi 1)
 (def pad (- (* 8 dpi) 0.5))
-(def columns 3)
+(def columns (atom 3))
 (def rows 7) ; Including the orchestra row
 
 (defn get-name [player]
@@ -75,10 +75,10 @@
   ctx)
 
 (defn draw-player [state context player index player-count width height]
-  (let [w (/ width columns)
-        h (/ height (+ 1 (math/ceil (/ (count (:players state)) columns))))
-        x (+ pad (* (mod index columns) w))
-        y (+ pad (* (int (/ index columns)) h) h)
+  (let [w (/ width @columns)
+        h (/ height (+ 1 (math/ceil (/ (count (:players state)) @columns))))
+        x (+ pad (* (mod index @columns) w))
+        y (+ pad (* (int (/ index @columns)) h) h)
         opacity (min 1 (* 10 (:volume player)))
         c (:color player)]
     (-> context
@@ -114,7 +114,7 @@
 
 (defn render-orchestra [state context]
   (let [width (- (:width state) (* 2 pad))
-        height (/ (- (:height state) (* 2 pad)) (+ 1 (math/ceil (/ (count (:players state)) columns))))]
+        height (/ (- (:height state) (* 2 pad)) (+ 1 (math/ceil (/ (count (:players state)) @columns))))]
     (-> context
       (canvas/globalAlpha! 1)
       (stroke-box "#FFF" pad pad width height)
@@ -130,6 +130,9 @@
       (stack-text! (str "Transposition " (math/to-precision (get-in state [:orchestra :transposition]) 4)))
       (end-stack!)
       (draw-history :orchestra (+ (* 120 dpi) pad) pad (- width (* 120 dpi)) height 12000))))
+
+(defn resize! [w h]
+  (reset! columns (max 1 (quot w 600))))
 
 (defn render! [state context]
   (canvas/clear! context)

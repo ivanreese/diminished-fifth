@@ -4,7 +4,7 @@
             [app.canvas :as canvas]
             [app.engine :as engine]
             [app.orchestra :as orchestra]
-            [app.render :refer [render!]]
+            [app.render :as render]
             [app.state :refer [state melodies samples callback text-context history history-min history-max]]
             [cljs.core.async :refer [<!]]
             [cljs.pprint :refer [pprint]])
@@ -25,7 +25,7 @@
   (let [mode (not @toggle-gui-mode)
         btn (js/document.querySelector ".toggle-gui.button")]
     (reset! toggle-gui-mode mode)
-    (render! @state @text-context)
+    (render/render! @state @text-context)
     (if mode
       (.removeAttribute btn "active")
       (.setAttribute btn "active" true))))
@@ -40,7 +40,7 @@
   (when @tick-once-mode (pause))
   (swap! state orchestra/tick dt (get-in @state [:engine :time]))
   (when @toggle-gui-mode
-    (render! @state @text-context)))
+    (render/render! @state @text-context)))
 
 (defn resize [& args]
   (let [w (.-innerWidth js/window)
@@ -48,7 +48,8 @@
     (swap! state assoc :width w)
     (swap! state assoc :height h)
     (canvas/resize! @text-context w h)
-    (render! @state @text-context)))
+    (render/resize! w h)
+    (render/render! @state @text-context)))
 
 (defn restart []
   (reset! state {})
@@ -56,7 +57,7 @@
   (resize)
   (swap! state engine/restart tick)
   (swap! state orchestra/init (get-in @state [:engine :time]))
-  (render! @state @text-context))
+  (render/render! @state @text-context))
 
 (defn fullscreen []
   (js/document.body.webkitRequestFullscreen))
