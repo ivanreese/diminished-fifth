@@ -54,11 +54,10 @@
 
 (defn draw-dying! [stack player velocity]
   (if (:dying player)
-    (let [stack (stack-text! stack (str "Dying"))]
-      (cond
-        (>= (:transposition player) player/max-transposition) (stack-text! stack (str "max-transposition"))
-        (> (* velocity (:scale player)) player/max-velocity) (stack-text! stack (str "max-velocity"))
-        :else stack))
+    (cond
+      (>= (:transposition player) player/max-transposition) (stack-text! stack (str "Dying: transposition"))
+      (> (* velocity (:scale player)) player/max-velocity) (stack-text! stack (str "Dying: velocity"))
+      :else (stack-text! stack (str "Dying")))
     stack))
   
 (defn draw-history [ctx subject-key base-x base-y width height max-history]
@@ -85,18 +84,18 @@
   ctx)
 
 (defn draw-player [state context player index player-count width height]
-  (let [w (/ width @columns)
+  (let [gutter (* 5 dpi pad)
+        totalSpaceForGutters (* gutter (- @columns 1))
+        w (/ (- width totalSpaceForGutters) @columns)
         h (/ (- height top) (+ 1 (math/ceil (/ (count (:players state)) @columns))))
         rowIndex (mod index @columns)
-        x (+ pad (* rowIndex w))
+        x (+ pad (* rowIndex (+ gutter w)))
         y (+ top pad (* (int (/ index @columns)) h) h)
         textTop (+ pad (* 12 dpi @scale))
         opacity (min 1 (* 1 (:volume player)))
         c (:color player)
         playerName (str (:index player) " " (get-name player))
         textHeight (+ pad (* 20 dpi @scale))]
-    (when (> rowIndex 0)
-      (stroke-left context c x y h))
     (-> context
       (canvas/globalAlpha! opacity)
       (canvas/fillStyle! c)
@@ -112,7 +111,7 @@
       (stack-fillStyle! (color/hsl (mod (hash "position") 360) 70 70))
       (stack-text! (str "Position " (math/to-fixed (:position player) 2)))
       (stack-fillStyle! (color/hsl (mod (hash "current-pitch") 360) 70 70))
-      (stack-text! (str "Current Pitch " (math/to-fixed (:current-pitch player) 3)))
+      (stack-text! (str "Pitch " (math/to-fixed (:current-pitch player) 3)))
       (stack-fillStyle! (color/hsl 0 70 70))
       (draw-dying! player (get-in state [:orchestra :velocity]))
       (end-stack!)
@@ -149,8 +148,8 @@
       (draw-history :orchestra (+ (* 120 dpi @scale) pad) (+ y textHeight) (- width (* 120 dpi @scale)) (- height textHeight pad) 12000))))
 
 (defn resize! [w h]
-  (reset! scale (/ h 1000 dpi)))
-  ; (reset! columns (max 1 (quot w 600))))
+  (reset! scale (/ h 1000 dpi))
+  (reset! columns (max 1 (quot w 1280))))
 
 (defn render! [state context]
   (canvas/clear! context)
