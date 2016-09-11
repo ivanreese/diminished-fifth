@@ -11,6 +11,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def dpi 2)
+(defonce transpose-requested (atom false))
 (defonce tick-once-mode (atom false))
 (defonce toggle-gui-mode (atom true))
 
@@ -39,6 +40,9 @@
 
 (defn tick [dt]
   (when @tick-once-mode (pause))
+  (when @transpose-requested
+    (swap! state assoc-in [:orchestra :key-change-time] 0)
+    (reset! transpose-requested false))
   (swap! state orchestra/tick dt (get-in @state [:engine :time]))
   (when @toggle-gui-mode
     (render/render! @state @text-context)))
@@ -70,6 +74,9 @@
         note (nth notes (int (rand (count notes))))]
     (audio/play sample note)))
 
+(defn transpose []
+  (reset! transpose-requested true))
+
 (defn setup-button [class callback]
   (.addEventListener (js/document.querySelector (str "." class))
                      "click"
@@ -95,6 +102,7 @@
       (setup-button "toggle-gui" toggle-gui)
       (setup-button "fullscreen" fullscreen)
       (setup-button "sound-check" sound-check)
+      (setup-button "transpose" transpose)
       (restart))))
 
 (defn preload []
