@@ -17,6 +17,9 @@
         (js/Math.round)
         (/ factor))))
 
+(defn to-fixed [i p]
+  (.toFixed i p))
+
 (defn clip
   ([input]
    (clip input 0 1))

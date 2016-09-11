@@ -10,6 +10,7 @@
             [cljs.pprint :refer [pprint]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
+(def dpi 2)
 (defonce tick-once-mode (atom false))
 (defonce toggle-gui-mode (atom true))
 
@@ -43,10 +44,11 @@
     (render/render! @state @text-context)))
 
 (defn resize [& args]
-  (let [w (.-innerWidth js/window)
-        h (.-innerHeight js/window)]
+  (let [w (* dpi (.-innerWidth js/window))
+        h (* dpi (.-innerHeight js/window))]
     (swap! state assoc :width w)
     (swap! state assoc :height h)
+    (swap! state assoc :dpi dpi)
     (canvas/resize! @text-context w h)
     (render/resize! w h)
     (render/render! @state @text-context)))
@@ -54,10 +56,9 @@
 (defn restart []
   (reset! state {})
   (reset! history {})
-  (resize)
   (swap! state engine/restart tick)
   (swap! state orchestra/init (get-in @state [:engine :time]))
-  (render/render! @state @text-context))
+  (resize))
 
 (defn fullscreen []
   (js/document.body.webkitRequestFullscreen))
@@ -94,10 +95,10 @@
       (setup-button "toggle-gui" toggle-gui)
       (setup-button "fullscreen" fullscreen)
       (setup-button "sound-check" sound-check)
-      (resize)
       (restart))))
 
 (defn preload []
+  (set! (.-textContent (js/document.querySelector ".preload")) "Click To Init")
   (js/window.addEventListener "mousedown" init)
   (js/window.addEventListener "touchstart" init))
 

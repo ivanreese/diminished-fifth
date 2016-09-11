@@ -13,7 +13,7 @@
 (def max-transposition (* initial-transposition 8))
 (def min-velocity (/ 1 32))
 (def max-velocity 16)
-
+(def vol 0.1)
 
 ;; ASSETS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -107,7 +107,7 @@
                   (+ (:volume player)
                      (* dt (+ 0.5 (/ velocity 2)) fade-rate))))]
     (-> player
-      (add-history :volume volume 30)
+      ; (add-history :volume volume 30)
       (assoc :volume volume))))
 
 (defn update-alive [player]
@@ -136,7 +136,7 @@
     (audio/play (:sample player)
                 {:pos (- (:position player) (:position note))
                  :pitch pitch
-                 :volume (* (:volume player) (/ (:volume note) (:transposition player)))}))
+                 :volume (* vol (:volume player) (/ (:volume note) (:transposition player)))}))
   player)
 
 (defn update-played-note [player key-transposition]

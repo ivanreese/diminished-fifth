@@ -84,9 +84,15 @@
   (.fillText context text x y)
   context)
 
+(defn measureText [context text]
+  (.measureText context text))
+
 
 ;; NICENESS
 
+
+(defn textWidth [context text]
+  (.-width (.measureText context text)))
 
 (defn canvas->context [canvas]
   (.getContext canvas "2d"))
