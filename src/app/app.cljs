@@ -71,8 +71,12 @@
   (let [sample (nth @samples (int (rand (count @samples))))
         melody (nth @melodies (int (rand (count @melodies))))
         notes (:notes melody)
-        note (nth notes (int (rand (count notes))))]
-    (audio/play sample note)))
+        note (nth notes (int (rand (count notes))))
+        key-transposition (get-in @state [:orchestra :transposition])
+        pitch (* (:pitch note) key-transposition)]
+    (js/console.log note)
+    (js/console.log pitch)
+    (audio/play sample (assoc note :pitch key-transposition))))
 
 (defn transpose []
   (reset! transpose-requested true))

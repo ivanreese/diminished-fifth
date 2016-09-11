@@ -3,6 +3,7 @@
 (defonce audio-context (atom nil))
 (defonce sample-rate (atom nil))
 (defonce master (atom nil))
+(def scale-volume 0.5)
 
 (defn make-impulse [n length decay]
   (* (- 1 (* 2 (.random js/Math)))
@@ -82,7 +83,7 @@
         gain (.createGain @audio-context)] ; This will be GC'd too when sample playback ends
     (aset source "buffer" (:buffer sample))
     (aset source "playbackRate" "value" (:pitch note))
-    (aset gain "gain" "value" (:volume note))
+    (aset gain "gain" "value" (* scale-volume (:volume note)))
     (.connect source gain)
     (.connect gain (:input @master))
     (.start source (:pos note))))

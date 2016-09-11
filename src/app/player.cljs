@@ -13,7 +13,6 @@
 (def max-transposition (* initial-transposition 8))
 (def min-velocity (/ 1 32))
 (def max-velocity 16)
-(def vol 0.1)
 
 ;; ASSETS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -136,7 +135,7 @@
     (audio/play (:sample player)
                 {:pos (- (:position player) (:position note))
                  :pitch pitch
-                 :volume (* vol (:volume player) (/ (:volume note) (:transposition player)))}))
+                 :volume (* (:volume player) (/ (:volume note) (:transposition player)))}))
   player)
 
 (defn update-played-note [player key-transposition]
