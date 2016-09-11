@@ -77,6 +77,8 @@
         upcoming-note-index (:index (first (filter #(>= (:position %) player-position) notes)))]
     (or upcoming-note-index 0)))
 
+(defn determine-percussive [index]
+  (zero? (mod index 3)))
 
 ;; UPDATES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -142,7 +144,9 @@
   (let [note (get-upcoming-note player)
         player-pos (:position player)
         note-pos (:position note)
-        pitch (* (:pitch note) (:transposition player) key-transposition)]
+        percussive (:percussive player)
+        raw-pitch (if percussive 1 (:pitch note))
+        pitch (* raw-pitch (:transposition player) key-transposition)]
     (if (< player-pos note-pos)
       player
       (-> player
@@ -155,7 +159,8 @@
 
 
 (defn make [reference-player index velocity]
-  (let [melody-index (mod index (count @melodies))
+  (let [percussive (determine-percussive index)
+        melody-index (mod index (count @melodies))
         sample-index (mod index (count @samples))
         position (get-sync-position reference-player)
         upcoming-note (determine-starting-note melody-index position)]
@@ -164,12 +169,13 @@
     (init-history index :position)
     (init-history index :volume)
     {:index index
+     :percussive percussive
      :melody-index melody-index
      :sample (nth @samples sample-index)
      :position position ; The current time we're at in the pattern, in ms
      :raw-position position
      :upcoming-note upcoming-note
-     :current-pitch (* initial-transposition (:pitch upcoming-note))
+     :current-pitch (* initial-transposition (if percussive 1 (:pitch upcoming-note)))
      :transposition initial-transposition ; Adjusted every time the track repeats by transposeOnRepeat
      :scale (math/clip (math/pow 2 (math/round (math/log2 (/ 1 velocity)))) (/ 1 32) 8)
      :volume (if (zero? index) 1 0)
