@@ -1,4 +1,35 @@
 {
+  "percussive":{
+    "kick":[
+      "FloorTom.mp3",
+      "ArghKick.mp3"
+    ],
+    "snare":[
+      "Snare.mp3",
+      "ArghSnareFlam.mp3",
+      "ArghSnareFlam2.mp3"
+    ],
+    "tick":[
+      "ArghBlock.mp3",
+      "ArghRim.mp3",
+      "ArghRim2.mp3",
+      "Tick.mp3"
+    ],
+    "cym":[
+      "CrashMute.mp3",
+      "Hat.mp3",
+      "Ride.mp3"
+    ],
+    "special":[
+      "ArghSuck.mp3",
+      "ChordSproingy.mp3",
+      "ChordThunderBuzz.mp3",
+      "LarFan.mp3",
+      "TanXylo.mp3",
+      "Vibra.mp3"
+      "LarSubKick.mp3",
+    ]
+  },
   "samples":[
     "1BCLo.mp3",
     "2BCHi.mp3",

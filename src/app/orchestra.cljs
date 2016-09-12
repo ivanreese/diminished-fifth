@@ -1,5 +1,6 @@
 (ns app.orchestra
-  (:require [app.math :as math]
+  (:require [app.drummer :as drummer]
+            [app.math :as math]
             [app.phasor :as phasor]
             [app.player :as player]
             [app.span :as span]
@@ -120,12 +121,12 @@
     state))
 
 (defn spawn [state time]
-  (if (>= (count (:players state))
-         max-players)
+  (if (>= (count (:players state)) max-players)
     state
-    (let [new-player (player/make (last (:players state))
-                                  (get-in state [:orchestra :next-player-index])
-                                  (get-in state [:orchestra :velocity]))]
+    (let [playerFn (if true player/make drummer/make) ;; TODO: decide when to spawn a drummer vs player
+          new-player (playerFn (last (:players state))
+                               (get-in state [:orchestra :next-player-index])
+                               (get-in state [:orchestra :velocity]))]
       (-> state
           (update :players conj new-player)
           (update-in [:orchestra :next-player-index] inc)

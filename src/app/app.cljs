@@ -11,9 +11,11 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def dpi 2)
-(defonce transpose-requested (atom false))
 (defonce tick-once-mode (atom false))
 (defonce toggle-gui-mode (atom true))
+
+(defn doRender []
+  (render/render! @state @text-context))
 
 (defn tick-once []
   (let [mode (not @tick-once-mode)
@@ -27,7 +29,7 @@
   (let [mode (not @toggle-gui-mode)
         btn (js/document.querySelector ".toggle-gui.button")]
     (reset! toggle-gui-mode mode)
-    (render/render! @state @text-context)
+    (doRender)
     (if mode
       (.removeAttribute btn "active")
       (.setAttribute btn "active" true))))
@@ -40,12 +42,9 @@
 
 (defn tick [dt]
   (when @tick-once-mode (pause))
-  (when @transpose-requested
-    (swap! state assoc-in [:orchestra :key-change-time] 0)
-    (reset! transpose-requested false))
   (swap! state orchestra/tick dt (get-in @state [:engine :time]))
   (when @toggle-gui-mode
-    (render/render! @state @text-context)))
+    (doRender)))
 
 (defn resize [& args]
   (let [w (* dpi (.-innerWidth js/window))
@@ -55,7 +54,7 @@
     (swap! state assoc :dpi dpi)
     (canvas/resize! @text-context w h)
     (render/resize! w h)
-    (render/render! @state @text-context)))
+    (doRender)))
 
 (defn restart []
   (reset! state {})
@@ -69,17 +68,15 @@
 
 (defn sound-check []
   (let [sample (nth @samples (int (rand (count @samples))))
-        melody (nth @melodies (int (rand (count @melodies))))
-        notes (:notes melody)
-        note (nth notes (int (rand (count notes))))
-        key-transposition (get-in @state [:orchestra :transposition])
-        pitch (* (:pitch note) key-transposition)]
-    (js/console.log note)
-    (js/console.log pitch)
-    (audio/play sample (assoc note :pitch key-transposition))))
+        key-transposition (get-in @state [:orchestra :transposition])]
+    (audio/play sample {:pitch key-transposition
+                        :volume 0.3
+                        :pos 0})))
 
 (defn transpose []
-  (reset! transpose-requested true))
+  (swap! state update-in [:orchestra :transposition] orchestra/update-transposition)
+  (when-not (get-in @state [:engine :running])
+    (doRender)))
 
 (defn setup-button [class callback]
   (.addEventListener (js/document.querySelector (str "." class))

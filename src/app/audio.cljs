@@ -3,7 +3,7 @@
 (defonce audio-context (atom nil))
 (defonce sample-rate (atom nil))
 (defonce master (atom nil))
-(def scale-volume 0.5)
+(def scale-volume 0.1)
 
 (defn make-impulse [n length decay]
   (* (- 1 (* 2 (.random js/Math)))
