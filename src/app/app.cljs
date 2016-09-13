@@ -11,7 +11,6 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def preload-elm (js/document.querySelector ".preload"))
-(def dpi 2)
 (defonce tick-once-mode (atom false))
 (defonce toggle-gui-mode (atom true))
 
@@ -48,14 +47,9 @@
     (doRender)))
 
 (defn resize [& args]
-  (let [w (* dpi (.-innerWidth js/window))
-        h (* dpi (.-innerHeight js/window))]
-    (swap! state assoc :width w)
-    (swap! state assoc :height h)
-    (swap! state assoc :dpi dpi)
-    (canvas/resize! @text-context w h)
-    (render/resize! w h)
-    (doRender)))
+  (render/resize! @text-context)
+  (render/render! @state @text-context))
+
 
 (defn restart []
   (reset! state {})

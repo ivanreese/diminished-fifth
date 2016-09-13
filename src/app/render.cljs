@@ -150,9 +150,15 @@
       (end-stack!)
       (draw-history :orchestra pad pad width (- (+ height top) pad textHeight) 12000))))
 
-(defn resize! [w h]
-  (reset! scale (/ h 1000 dpi))
-  (reset! columns (max 1 (quot w 1280))))
+(defn resize! [context]
+  (let [w (* dpi (.-innerWidth js/window))
+        h (* dpi (.-innerHeight js/window))]
+    (swap! state assoc :width w)
+    (swap! state assoc :height h)
+    (swap! state assoc :dpi dpi)
+    (canvas/resize! context w h)
+    (reset! scale (/ h 1000 dpi))
+    (reset! columns (max 1 (quot w 1280)))))
 
 (defn render! [state context]
   (canvas/clear! context)
