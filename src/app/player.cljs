@@ -14,7 +14,7 @@
 (def max-transposition (* initial-transposition 8))
 (def min-velocity (/ 1 32))
 (def max-velocity 16)
-(def drone-frac 0.2)
+(def drone-frac 0.1)
 
 ;; ASSETS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -147,7 +147,7 @@
      :current-pitch (* initial-transposition (:pitch upcoming-note))
      :transposition initial-transposition ; Adjusted every time the track repeats by transposeOnRepeat
      :scale (math/clip (math/pow 2 (math/round (math/log2 (/ 1 velocity)))) (/ 1 32) 8)
-     :volume (if (zero? index) 1 0)
+     :volume 0
      :history-active false
      :drone (< (Math/random) drone-frac)
      :alive true ; When we die, we'll get filtered out of the list of players

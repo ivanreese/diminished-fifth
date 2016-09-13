@@ -10,6 +10,7 @@
             [cljs.pprint :refer [pprint]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
+(def preload-elm (js/document.querySelector ".preload"))
 (def dpi 2)
 (defonce tick-once-mode (atom false))
 (defonce toggle-gui-mode (atom true))
@@ -84,17 +85,16 @@
                      callback))
 
 (defn init []
-  (js/window.removeEventListener "mousedown" init)
-  (js/window.removeEventListener "touchstart" init)
+  (.removeEventListener preload-elm "click" init)
   (audio/setup)
-  (set! (.-textContent (js/document.querySelector ".preload")) "Loading Audio Files")
+  (set! (.-textContent preload-elm) "Loading Audio Files")
   (go
     (let [manifest (<! (ajax-channel "manifest.json"))]
       (reset! melodies (<! (load-assets manifest "melodies" melody-loader)))
       (reset! samples (<! (load-assets manifest "samples" sample-loader)))
       (reset! text-context (canvas/create!))
-      (js/window.addEventListener "resize" resize)
-      (.setAttribute (js/document.querySelector ".preload") "hide", "")
+      (js/document.addEventListener "resize" resize)
+      (.setAttribute preload-elm "hide", "")
       (.removeAttribute (js/document.querySelector ".buttons") "hide")
       (setup-button "play" play)
       (setup-button "pause" pause)
@@ -109,8 +109,7 @@
       (play))))
 
 (defn preload []
-  (set! (.-textContent (js/document.querySelector ".preload")) "Click To Init")
-  (js/window.addEventListener "mousedown" init)
-  (js/window.addEventListener "touchstart" init))
+  (set! (.-textContent preload-elm) "Click To Init")
+  (.addEventListener preload-elm "click" init))
 
 (defonce initialized (do (preload) true))
