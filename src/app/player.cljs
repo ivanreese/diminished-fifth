@@ -1,8 +1,9 @@
 (ns app.player
   (:require [app.audio :as audio]
             [app.color :as color]
+            [app.history :as history]
             [app.math :as math]
-            [app.state :refer [state melodies samples history history-max history-min]]
+            [app.state :refer [state melodies samples]]
             [app.util :refer [log]]
             [cljs.pprint :refer [pprint]]))
 
@@ -30,47 +31,11 @@
   (get-note-at-index (get-player-melody player)
                      (:upcoming-note player)))
 
-
-;; HISTORY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-(defn trim-history [player]
-  (when-not (:alive player)
-    (swap! history dissoc (:index player)))
-  player)
-
-(defn add-history [player key value skip]
-  (when (zero? (mod (get-in @state [:engine :count]) skip))
-    (let [value (or value 0)]
-      (swap! history update-in [(:index player) key] conj value)
-      (if (nil? (get-in @history-min [(:index player) key]))
-        (swap! history-min assoc-in [(:index player) key] value)
-        (swap! history-min update-in [(:index player) key] min value))
-      (if (nil? (get-in @history-max [(:index player) key]))
-        (swap! history-max assoc-in [(:index player) key] value)
-        (swap! history-max update-in [(:index player) key] max value))))
-  player)
-
-(defn add-history-prop [player key skip]
-  (add-history player key (key player) skip))
-
-(defn init-history [index key]
-  (swap! history assoc-in [index key] [])
-  (swap! history-min assoc-in [index key] Infinity)
-  (swap! history-max assoc-in [index key] -Infinity))
-
 ;; MAKE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn get-sync-position [reference-player]
-  (if (nil? reference-player)
-    0
-    (let [duration (:duration (get-player-melody reference-player))]
-      (mod
-       (/ (mod (+ (:position reference-player) duration)
-               duration) ; This mod ensures that we aren't < 0
-          (:scale reference-player))
-       duration))))
+(defn get-duration [reference-player]
+  (:duration (get-player-melody reference-player)))
 
 (defn determine-starting-note [melody-index player-position]
   (let [notes (:notes (get-melody-at-index melody-index))
@@ -86,7 +51,7 @@
         position (+ (:position player) velocity)
         raw-position (+ (:raw-position player) velocity)]
     (-> player
-      (add-history :position raw-position 6)
+      ; (history/add-history :position raw-position 6)
       (assoc :position position)
       (assoc :raw-position raw-position))))
 
@@ -106,7 +71,7 @@
                   (+ (:volume player)
                      (* dt (+ 0.5 (/ velocity 2)) fade-rate))))]
     (-> player
-      ; (add-history :volume volume 30)
+      ; (history/add-history :volume volume 30)
       (assoc :volume volume))))
 
 (defn update-alive [player]
@@ -154,16 +119,16 @@
 ;; PUBLIC ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn make [reference-player index velocity]
+(defn make [position index velocity] ;; What stops the position from being WAY too high?
   (let [melody-index (mod index (count @melodies))
         sample-index (mod index (count @samples))
-        position (get-sync-position reference-player)
         upcoming-note (determine-starting-note melody-index position)]
-    ; (init-history index :upcoming-note)
-    (init-history index :current-pitch)
-    (init-history index :position)
-    (init-history index :volume)
-    {:index index
+    ; (history/init-history index :upcoming-note)
+    (history/init-history index :current-pitch)
+    ; (history/init-history index :position)
+    ; (history/init-history index :volume)
+    {:type :player
+     :index index
      :melody-index melody-index
      :sample (nth @samples sample-index)
      :position position ; The current time we're at in the pattern, in ms
@@ -184,8 +149,8 @@
       (update-volume dt velocity)
       (update-alive)
       (update-played-note key-transposition)
-      (add-history-prop :current-pitch 2)
-      (trim-history)))
+      (history/add-history-prop :current-pitch 2)
+      (history/trim-history)))
 
 (defn rescale [player factor]
   (update player :scale * factor))

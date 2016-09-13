@@ -120,18 +120,33 @@
     (key-change state time)
     state))
 
+
+(defn get-sync-position [player]
+  (let [type (:type player)
+        duration (cond
+                   (= type :player) (player/get-duration player)
+                   (= type :drummer) (drummer/get-duration player))]
+    (mod
+     (/ (mod (+ (:position player) duration)
+             duration) ; This mod stuff ensures that we aren't < 0
+        (:scale player))
+     duration))) ; mod by duration twice because scale might be greater than 1 (right?)
+    
 (defn spawn [state time]
-  (if (>= (count (:players state)) max-players)
-    state
-    (let [playerFn (if true player/make drummer/make) ;; TODO: decide when to spawn a drummer vs player
-          new-player (playerFn (last (:players state))
+  (let [players (:players state)
+        nplayers (count players)]
+    (if (>= nplayers max-players)
+      state
+      (let [typeFn (if true player/make drummer/make) ;; TODO: decide when to spawn a drummer vs player
+            position (if (zero? nplayers) 0 (get-sync-position (last players)))
+            new-player (typeFn position
                                (get-in state [:orchestra :next-player-index])
                                (get-in state [:orchestra :velocity]))]
-      (-> state
-          (update :players conj new-player)
-          (update-in [:orchestra :next-player-index] inc)
-          (assoc-in [:orchestra :spawn-time] (next-spawn-time time))
-          (check-key-change time)))))
+        (-> state
+            (update :players conj new-player)
+            (update-in [:orchestra :next-player-index] inc)
+            (assoc-in [:orchestra :spawn-time] (next-spawn-time time))
+            (check-key-change time))))))
 
 
 (defn tick-spawn [state time]
@@ -148,7 +163,7 @@
   (-> state
       (assoc :players [])
       (assoc :orchestra {:key-change-time   (next-key-change-time time)
-                         :next-player-index 0 ;715;(int (math/random 0 1000))
+                         :next-player-index (int (math/random 0 1000)) ; 0
                          :velocity 1
                          :scale 1
                          :spawn-time        (next-spawn-time time)

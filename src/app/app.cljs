@@ -100,6 +100,7 @@
       (setup-button "pause" pause)
       (setup-button "restart" restart)
       (setup-button "tick-once" tick-once)
+      (setup-button "redraw" doRender)
       (setup-button "toggle-gui" toggle-gui)
       (setup-button "fullscreen" fullscreen)
       (setup-button "sound-check" sound-check)

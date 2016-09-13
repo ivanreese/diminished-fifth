@@ -6,7 +6,7 @@
     (.requestAnimationFrame js/window tick)
     (let [last-wall-time (get-in @state [:engine :wall-time])
           wall-time (/ time-ms 1000)
-          dt (- wall-time last-wall-time)
+          dt (min (- wall-time last-wall-time) .1)
           count (inc (get-in @state [:engine :count]))]
       (swap! state update-in [:engine :time] + dt)
       (swap! state assoc-in [:engine :wall-time] wall-time)
