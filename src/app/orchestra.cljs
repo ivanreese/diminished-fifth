@@ -1,10 +1,11 @@
 (ns app.orchestra
   (:require [app.drummer :as drummer]
+            [app.history :as history]
             [app.math :as math]
             [app.phasor :as phasor]
             [app.player :as player]
             [app.span :as span]
-            [app.state :refer [state history history-max history-min]]
+            [app.state :refer [state]]
             [app.util :refer [log]]
             [cljs.pprint :refer [pprint]]))
 
@@ -21,30 +22,13 @@
 (def velocity-cycle-time 90)
 
 
-; HISTORY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-(defn add-history [state key value skip]
-  (when (zero? (mod (get-in state [:engine :count]) skip))
-    (let [value (or value 0)]
-      (swap! history update-in [:orchestra key] conj value)
-      (swap! history-min update-in [:orchestra key] min value)
-      (swap! history-max update-in [:orchestra key] max value)))
-  state)
-
-(defn init-history [key]
-  (swap! history assoc-in [:orchestra key] [])
-  (swap! history-min assoc-in [:orchestra key] Infinity)
-  (swap! history-max assoc-in [:orchestra key] -Infinity))
-
-
 ; PLAYBACK RATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defn advance-velocity [state dt time]
   (let [velocity (math/scale (math/pow (math/sin (/ time velocity-cycle-time)) 3) -1 1 min-velocity max-velocity)
         scaled-velocity (max (* (+ 1 (/ time 1200)) velocity) velocity)]
-    (add-history state :velocity scaled-velocity 30)
+    (history/add-history :orchestra :velocity scaled-velocity (Math/ceil (Math/sqrt (get-in state [:engine :count]))))
     (assoc-in state [:orchestra :velocity] scaled-velocity)))
 
 (defn rescale-players [players factor]
@@ -159,11 +143,11 @@
 
 
 (defn init [state time]
-  (init-history :velocity)
+  (history/init-history :orchestra :velocity)
   (-> state
       (assoc :players [])
       (assoc :orchestra {:key-change-time   (next-key-change-time time)
-                         :next-player-index (int (math/random 0 1000)) ; 0
+                         :next-player-index 0; (int (math/random 0 1000)) ; 0
                          :velocity 1
                          :scale 1
                          :spawn-time        (next-spawn-time time)

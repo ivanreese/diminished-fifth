@@ -9,11 +9,10 @@
     (swap! history dissoc (:index player)))
   player)
 
-(defn add-history [player key value skipN]
+(defn add-history [id key value skipN]
   (when (zero? (mod (get-in @state [:engine :count]) skipN)) ; Only add history once every skipN ticks
     (let [value (or value 0)
-          index (:index player)
-          arr (get-in @history [index key])
+          arr (get-in @history [id key])
           slot (alength arr)
           prev-slot (- slot 1)
           prev-value (when (>= prev-slot 0) (aget arr prev-slot))
@@ -28,20 +27,24 @@
                      (= prev-prev-value value)))
         (aset arr prev-slot nil))
       
-      (if (nil? (get-in @history-min [index key]))
-        (swap! history-min assoc-in [index key] value)
-        (swap! history-min update-in [index key] min value))
-      (if (nil? (get-in @history-max [index key]))
-        (swap! history-max assoc-in [index key] value)
-        (swap! history-max update-in [index key] max value))))
-  player)
+      ; (if (nil? (get-in @history-min [id key]))
+      ;   (swap! history-min assoc-in [id key] value)
+      (swap! history-min update-in [id key] min value)
+      ; (if (nil? (get-in @history-max [id key]))
+      ;   (swap! history-max assoc-in [id key] value)
+      (swap! history-max update-in [id key] max value)))
+  id)
 
+
+(defn add-history-player [player key val skipN]
+  (add-history (:index player) key val skipN)
+  player) ;; pass through
 
 (defn add-history-prop [player key skipN]
-  (add-history player key (key player) skipN))
+  (add-history-player player key (get player key) skipN))
 
 
-(defn init-history [index key]
-  (swap! history assoc-in [index key] #js [])
-  (swap! history-min assoc-in [index key] Infinity)
-  (swap! history-max assoc-in [index key] -Infinity))
+(defn init-history [id key]
+  (swap! history assoc-in [id key] #js [])
+  (swap! history-min assoc-in [id key] Infinity)
+  (swap! history-max assoc-in [id key] -Infinity))

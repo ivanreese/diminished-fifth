@@ -105,7 +105,8 @@
       (setup-button "fullscreen" fullscreen)
       (setup-button "sound-check" sound-check)
       (setup-button "transpose" transpose)
-      (restart))))
+      (restart)
+      (play))))
 
 (defn preload []
   (set! (.-textContent (js/document.querySelector ".preload")) "Click To Init")

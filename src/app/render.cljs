@@ -70,28 +70,18 @@
                 n-values (alength values)
                 min-v (get-in @history-min [subject-key prop-key])
                 max-v (get-in @history-max [subject-key prop-key])
-                v-range (- max-v min-v)
+                v-range (max 0.0000001 (- max-v min-v)) ;; avoid a divide by 0 error
                 n-values' (- n-values 1)]]
-                ; i (volatile! 1)
     (when (> n-values 1)
       (canvas/beginPath! ctx)
-      (canvas/strokeStyle! ctx (mod-hash-color (name prop-key)))
-      (canvas/moveTo! ctx
-                      base-x
-                      (+ base-y (* height (- 1 (/ (- (nth values 0) min-v) v-range)))))
-      (loop [i 1 last -1]
+      (loop [i 0 draw-fn canvas/moveTo!]
         (let [v (aget values i)]
           (when-not (nil? v)
-            (canvas/lineTo! ctx
-                            (+ base-x (* width (/ i n-values')))
-                            (+ base-y (* height (- 1 (/ (- v min-v) v-range))))))
+            (draw-fn ctx
+                     (+ base-x (* width (/ i n-values')))
+                     (+ base-y (* height (- 1 (/ (- v min-v) v-range))))))
           (when (< i n-values')
-            (recur (inc i) v))))
-      ; (while (< @i n-values)
-      ;        (canvas/lineTo! ctx
-      ;                        (+ base-x (* width (/ @i n-values')))
-      ;                        (+ base-y (* height (- 1 (/ (- (aget values @i) min-v) v-range)))))
-      ;        (vswap! i inc))
+            (recur (inc i) canvas/lineTo!))))
       (canvas/stroke! ctx)))
   ctx)
 
@@ -105,7 +95,7 @@
         x (+ pad (* rowIndex (+ gutter w)))
         y (+ top pad (/ ygutter 2) (* (int (/ index @columns)) h) h)
         textTop (+ pad (* 2 dpi @scale))
-        opacity (min 1 (* 1 (:volume player)))
+        opacity (min 1 (* 3 (:volume player)))
         c (:color player)
         playerName (str (:index player) " " (get-name player))
         textHeight (* 16 dpi @scale)]
@@ -113,6 +103,7 @@
       ; (stroke-box "#FFF" x (+ y ygutter) w (- h ygutter))
       (canvas/globalAlpha! opacity)
       (canvas/fillStyle! c)
+      (canvas/strokeStyle! c)
       (canvas/font! (str (* 14 dpi @scale) "px sans-serif"))
       (canvas/fillText! playerName x (+ y h))
       (begin-stack! (+ x pad (canvas/textWidth context playerName))
@@ -123,9 +114,7 @@
       (stack-text! (str "Scale " (:scale player)))
       (stack-text! (str "Xpos " (:transposition player)))
       (stack-text! (str "Pos " (math/to-fixed (:position player) 2)))
-      (stack-fillStyle! (mod-hash-color "current-pitch"))
       (stack-text! (str "Pitch " (math/to-fixed (:current-pitch player) 2)))
-      (stack-fillStyle! (color/hsl 0 70 70))
       (draw-dying! player (get-in state [:orchestra :velocity]))
       (end-stack!)
       (draw-history (:index player) x (+ y ygutter) w (- h textHeight ygutter) 1000))))
@@ -150,13 +139,13 @@
       (canvas/globalAlpha! 1)
       ; (stroke-box "#FFF" x top width height)
       (canvas/fillStyle! "#FFF")
+      (canvas/strokeStyle! "#FFF")
       (canvas/font! (str (* 14 dpi @scale) "px sans-serif"))
       (canvas/fillText! "Orchestra" x (+ y height))
       (begin-stack! (+ x pad (canvas/textWidth context "Orchestra")) (+ y height) (str (* 12 dpi @scale) "px sans-serif"))
       (stack-text! (str "Time " (math/to-fixed (get-in state [:engine :time]) 2)))
       (stack-text! (str "Count " (get-in state [:engine :count])))
       (stack-text! (str "Xpos " (math/to-fixed (get-in state [:orchestra :transposition]) 2)))
-      (stack-fillStyle! (mod-hash-color "velocity"))
       (stack-text! (str "Vel " (math/to-fixed (get-in state [:orchestra :velocity]) 4)))
       (end-stack!)
       (draw-history :orchestra pad pad width (- (+ height top) pad textHeight) 12000))))
