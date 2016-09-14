@@ -8,7 +8,7 @@
 (def dpi 2)
 (def pad (- (* 8 dpi) 0.5))
 (def top (+ 48 pad))
-(def columns (atom 2))
+(def columns (atom 3))
 (defonce scale (atom 1))
 
 (defn mod-hash-color [val]
@@ -119,6 +119,44 @@
       (end-stack!)
       (draw-history (:index player) x (+ y ygutter) w (- h textHeight ygutter) 1000))))
 
+(defn draw-drummer [state context player index player-count width height]
+  (let [gutter (* 3 dpi pad)
+        ygutter (* 1 dpi pad @scale @columns)
+        totalSpaceForGutters (* gutter (- @columns 1))
+        w (/ (- width totalSpaceForGutters) @columns)
+        h (/ (- height top ygutter) (+ 1 (math/ceil (/ (count (:players state)) @columns))))
+        rowIndex (mod index @columns)
+        x (+ pad (* rowIndex (+ gutter w)))
+        y (+ top pad (/ ygutter 2) (* (int (/ index @columns)) h) h)
+        textTop (+ pad (* 2 dpi @scale))
+        opacity (min 1 (* 3 (:volume player)))
+        c (:color player)
+        playerName (str (:index player) " " (get-name player))
+        textHeight (* 16 dpi @scale)]
+    (-> context
+      ; (stroke-box "#FFF" x (+ y ygutter) w (- h ygutter))
+      (canvas/globalAlpha! opacity)
+      (canvas/fillStyle! c)
+      (canvas/strokeStyle! c)
+      (canvas/font! (str (* 14 dpi @scale) "px sans-serif"))
+      (canvas/fillText! playerName x (+ y h))
+      (begin-stack! (+ x pad (canvas/textWidth context playerName))
+                    (+ y h)
+                    (str (* 12 dpi @scale) "px sans-serif"))
+      (stack-text! (str "Vol " (math/to-fixed (:volume player) 1)))
+      (stack-text! (str "Scale " (:scale player)))
+      (stack-text! (str "Pos " (math/to-fixed (:position player) 2)))
+      (stack-text! (str "Next " (math/to-fixed (:next-position player) 2)))
+      (stack-text! (str "Duration " (math/to-fixed (:duration player) 2)))
+      (draw-dying! player (get-in state [:orchestra :velocity]))
+      (end-stack!)
+      (draw-history (:index player) x (+ y ygutter) w (- h textHeight ygutter) 1000))))
+
+(defn snoop-logg [player]
+  (js/console.log (clj->js player))
+  player)
+
+
 (defn render-players [state context]
   (let [all-players (:players state)
         player-count (count all-players)
@@ -126,8 +164,17 @@
         h (- (:height state) (* 2 pad))]
     (loop [players all-players index 0]
       (when-not (empty? players)
-        (draw-player state context (first players) index player-count w h)
-        (recur (rest players) (inc index))))))
+        (let [player (first players)
+              type (:type player)]
+          ; (snoop-logg player)
+          (cond
+            (= type :player)
+            (draw-player state context player index player-count w h)
+            
+            (= type :drummer)
+            (draw-drummer state context player index player-count w h))
+          
+          (recur (rest players) (inc index)))))))
 
 (defn render-orchestra [state context]
   (let [x pad

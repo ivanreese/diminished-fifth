@@ -4,17 +4,17 @@
             [app.history :as history]
             [app.math :as math]
             [app.state :refer [state melodies samples]]
-            [app.util :refer [log]]
+            [app.util :refer [snoop-logg]]
             [cljs.pprint :refer [pprint]]))
 
-(def fade-rate 0.02)
+(def fade-rate 0.03)
 (def transpose-on-repeat 2)
-(def initial-transposition 0.5)
-(def min-transposition (/ initial-transposition 8))
-(def max-transposition (* initial-transposition 8))
-(def min-velocity (/ 1 32))
-(def max-velocity 16)
-(def drone-frac 0.1)
+(def initial-transposition 1)
+(def min-transposition (/ initial-transposition 16))
+(def max-transposition (* initial-transposition 16))
+(def min-velocity (/ 1 64))
+(def max-velocity 32)
+(def drone-frac .1)
 
 ;; ASSETS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

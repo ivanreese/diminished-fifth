@@ -6,7 +6,7 @@
             [app.player :as player]
             [app.span :as span]
             [app.state :refer [state]]
-            [app.util :refer [log]]
+            [app.util :refer [snoop-logg]]
             [cljs.pprint :refer [pprint]]))
 
 (def key-change-steps 7)
@@ -17,9 +17,9 @@
 (def spawn-time (span/make 6 6)) ;(span/make 4 9))
 (def key-change-time (span/make 240 240)) ;(span/make 60 600))
 (def min-velocity 0)
-(def max-velocity 2)
-(def velocity-pos-scale 1)
-(def velocity-cycle-time 90)
+(def max-velocity 4)
+(def velocity-cycle-time 180)
+(def drummer-frac .25)
 
 
 ; PLAYBACK RATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -63,9 +63,15 @@
     (spawn state time)
     state))
 
+
+(defn do-tick [player dt velocity transposition]
+  (case (:type player)
+        :player (player/tick player dt velocity transposition)
+        :drummer (drummer/tick player dt velocity)))
+
 (defn update-players [players dt velocity transposition]
   (->> players
-       (mapv #(player/tick % dt velocity transposition))
+       (mapv #(do-tick % dt velocity transposition))
        (filterv :alive)))
 
 (defn tick-players [state dt time]
@@ -107,25 +113,25 @@
 
 (defn get-sync-position [player]
   (let [type (:type player)
-        duration (cond
-                   (= type :player) (player/get-duration player)
-                   (= type :drummer) (drummer/get-duration player))]
+        duration (case type
+                       :player (player/get-duration player)
+                       :drummer (drummer/get-duration player))]
     (mod
      (/ (mod (+ (:position player) duration)
              duration) ; This mod stuff ensures that we aren't < 0
         (:scale player))
-     duration))) ; mod by duration twice because scale might be greater than 1 (right?)
+     duration))) ; mod by duration twice because scale might be less than 1 (right?)
     
 (defn spawn [state time]
   (let [players (:players state)
         nplayers (count players)]
     (if (>= nplayers max-players)
       state
-      (let [typeFn (if true player/make drummer/make) ;; TODO: decide when to spawn a drummer vs player
+      (let [make-player (if (< (Math/random) drummer-frac) drummer/make player/make)
             position (if (zero? nplayers) 0 (get-sync-position (last players)))
-            new-player (typeFn position
-                               (get-in state [:orchestra :next-player-index])
-                               (get-in state [:orchestra :velocity]))]
+            new-player (make-player position
+                                    (get-in state [:orchestra :next-player-index])
+                                    (get-in state [:orchestra :velocity]))]
         (-> state
             (update :players conj new-player)
             (update-in [:orchestra :next-player-index] inc)
@@ -147,7 +153,7 @@
   (-> state
       (assoc :players [])
       (assoc :orchestra {:key-change-time   (next-key-change-time time)
-                         :next-player-index 0; (int (math/random 0 1000)) ; 0
+                         :next-player-index (int (math/random 0 10000)) ; 0
                          :velocity 1
                          :scale 1
                          :spawn-time        (next-spawn-time time)

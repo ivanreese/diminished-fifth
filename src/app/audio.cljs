@@ -2,7 +2,7 @@
   (:require [app.assets :as assets]
             [app.state :refer [audio-context master sample-rate]]))
 
-(def scale-volume 1)
+(def scale-volume .1)
 
 (defn make-impulse [n length decay]
   (* (- 1 (* 2 (.random js/Math)))

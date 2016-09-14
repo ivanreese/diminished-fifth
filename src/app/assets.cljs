@@ -1,5 +1,5 @@
 (ns app.assets
-  (:require [app.util :refer [log]]
+  (:require [app.util :refer [snoop-logg]]
             [app.state :refer [audio-context buffers]]
             [ajax.core :refer [GET]]
             [cljs.core.async :as async :refer [<! >! chan close!]])
@@ -12,7 +12,7 @@
         (close! ch))))
 
 (defn on-err [err]
-  (log err))
+  (snoop-logg err))
 
 (defn ajax-channel [url]
   (let [ch (chan)]
