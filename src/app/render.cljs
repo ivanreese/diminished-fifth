@@ -3,7 +3,7 @@
             [app.color :as color]
             [app.math :as math :refer [tau]]
             [app.player :as player]
-            [app.state :refer [state history history-min history-max]]))
+            [app.state :refer [history history-min history-max]]))
 
 (def dpi 2)
 (def pad (- (* 8 dpi) 0.5))
@@ -150,17 +150,20 @@
       (end-stack!)
       (draw-history :orchestra pad pad width (- (+ height top) pad textHeight) 12000))))
 
-(defn resize! [context]
-  (let [w (* dpi (.-innerWidth js/window))
+(defn resize! []
+  (let [context @app.state/text-context
+        w (* dpi (.-innerWidth js/window))
         h (* dpi (.-innerHeight js/window))]
-    (swap! state assoc :width w)
-    (swap! state assoc :height h)
-    (swap! state assoc :dpi dpi)
+    (swap! app.state/state assoc :width w)
+    (swap! app.state/state assoc :height h)
+    (swap! app.state/state assoc :dpi dpi)
     (canvas/resize! context w h)
     (reset! scale (/ h 1000 dpi))
     (reset! columns (max 1 (quot w 1280)))))
 
-(defn render! [state context]
-  (canvas/clear! context)
-  (render-players state context)
-  (render-orchestra state context))
+(defn render! []
+  (let [context @app.state/text-context
+        state @app.state/state]
+    (canvas/clear! context)
+    (render-players state context)
+    (render-orchestra state context)))

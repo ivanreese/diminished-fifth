@@ -1,38 +1,18 @@
 (ns ^:figwheel-always app.app
-  (:require [app.assets :refer [load-assets ajax-channel melody-loader sample-loader]]
+  (:require [app.assets :refer [ajax-channel load-samples]]
             [app.audio :as audio]
             [app.canvas :as canvas]
             [app.engine :as engine]
+            [app.history :as history]
+            [app.melodies :as melodies]
             [app.orchestra :as orchestra]
             [app.render :as render]
-            [app.state :refer [state melodies samples callback text-context history history-min history-max]]
+            [app.state :refer [state samples callback text-context]]
             [cljs.core.async :refer [<!]]
             [cljs.pprint :refer [pprint]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (def preload-elm (js/document.querySelector ".preload"))
-(defonce tick-once-mode (atom false))
-(defonce toggle-gui-mode (atom true))
-
-(defn doRender []
-  (render/render! @state @text-context))
-
-(defn tick-once []
-  (let [mode (not @tick-once-mode)
-        btn (js/document.querySelector ".tick-once.button")]
-    (reset! tick-once-mode mode)
-    (if mode
-      (.setAttribute btn "active" true)
-      (.removeAttribute btn "active"))))
-
-(defn toggle-gui []
-  (let [mode (not @toggle-gui-mode)
-        btn (js/document.querySelector ".toggle-gui.button")]
-    (reset! toggle-gui-mode mode)
-    (doRender)
-    (if mode
-      (.removeAttribute btn "active")
-      (.setAttribute btn "active" true))))
 
 (defn play []
   (swap! state engine/start))
@@ -41,19 +21,19 @@
   (swap! state engine/stop))
 
 (defn tick [dt]
-  (when @tick-once-mode (pause))
   (swap! state orchestra/tick dt (get-in @state [:engine :time]))
-  (when @toggle-gui-mode
-    (doRender)))
+  (when-not (:gui-disabled @state)
+    (render/render!))
+  (when (:tick-once-mode @state)
+    (pause)))
 
 (defn resize [& args]
-  (render/resize! @text-context)
-  (render/render! @state @text-context))
-
+  (render/resize!)
+  (render/render!))
 
 (defn restart []
   (reset! state {})
-  (reset! history {})
+  (history/init)
   (swap! state engine/restart tick)
   (swap! state orchestra/init (get-in @state [:engine :time]))
   (resize))
@@ -71,7 +51,26 @@
 (defn transpose []
   (swap! state update-in [:orchestra :transposition] orchestra/update-transposition)
   (when-not (get-in @state [:engine :running])
-    (doRender)))
+    (render/render!)))
+
+(defn tick-once []
+  (let [mode (not (:tick-once-mode @state))
+        btn (js/document.querySelector ".tick-once.button")]
+    (swap! state assoc :tick-once-mode mode)
+    (when mode
+      (.setAttribute btn "active" true)
+      (play))
+    (when-not mode
+      (.removeAttribute btn "active"))))
+
+(defn toggle-gui []
+  (let [gui-disabled (not (:gui-disabled @state))
+        btn (js/document.querySelector ".toggle-gui.button")]
+    (swap! state assoc :gui-disabled gui-disabled)
+    (render/render!)
+    (if gui-disabled
+      (.setAttribute btn "active" true)
+      (.removeAttribute btn "active"))))
 
 (defn setup-button [class callback]
   (.addEventListener (js/document.querySelector (str "." class))
@@ -79,31 +78,33 @@
                      callback))
 
 (defn init []
+  (.removeEventListener js/window "click" init)
   (.removeEventListener preload-elm "click" init)
   (audio/setup)
+  (melodies/init)
   (set! (.-textContent preload-elm) "Loading Audio Files")
   (go
     (let [manifest (<! (ajax-channel "manifest.json"))]
-      (reset! melodies (<! (load-assets manifest "melodies" melody-loader)))
-      (reset! samples (<! (load-assets manifest "samples" sample-loader)))
+      (reset! samples (load-samples manifest))
       (reset! text-context (canvas/create!))
-      (js/document.addEventListener "resize" resize)
+      (js/window.addEventListener "resize" resize)
       (.setAttribute preload-elm "hide", "")
       (.removeAttribute (js/document.querySelector ".buttons") "hide")
       (setup-button "play" play)
       (setup-button "pause" pause)
       (setup-button "restart" restart)
       (setup-button "tick-once" tick-once)
-      (setup-button "redraw" doRender)
+      (setup-button "redraw" render/render!)
       (setup-button "toggle-gui" toggle-gui)
       (setup-button "fullscreen" fullscreen)
       (setup-button "sound-check" sound-check)
       (setup-button "transpose" transpose)
-      (restart)
-      (play))))
+      (restart))))
+      ; (play))))
 
 (defn preload []
   (set! (.-textContent preload-elm) "Click To Init")
-  (.addEventListener preload-elm "click" init))
+  (.addEventListener preload-elm "click" init)
+  (.addEventListener js/window "click" init))
 
 (defonce initialized (do (preload) true))

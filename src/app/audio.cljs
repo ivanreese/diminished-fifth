@@ -1,8 +1,7 @@
-(ns app.audio)
+(ns app.audio
+  (:require [app.assets :as assets]
+            [app.state :refer [audio-context master sample-rate]]))
 
-(defonce audio-context (atom nil))
-(defonce sample-rate (atom nil))
-(defonce master (atom nil))
 (def scale-volume 1)
 
 (defn make-impulse [n length decay]
@@ -74,16 +73,14 @@
       {:input input
        :analyser analyser})))
 
-(defn decode [data cb]
-  (.decodeAudioData @audio-context data cb))
-
-
 (defn play [sample note]
-  (let [source (.createBufferSource @audio-context) ;; We don't need a ref to this — it is GC'd when sample playback ends
-        gain (.createGain @audio-context)] ; This will be GC'd too when sample playback ends
-    (aset source "buffer" (:buffer sample))
-    (aset source "playbackRate" "value" (:pitch note))
-    (aset gain "gain" "value" (* scale-volume (:volume note)))
-    (.connect source gain)
-    (.connect gain (:input @master))
-    (.start source (:pos note))))
+  (let [buffer (assets/get-buffer sample)]
+    (when-not (nil? buffer)
+      (let [source (.createBufferSource @audio-context) ;; We don't need a ref to this — it is GC'd when sample playback ends
+            gain (.createGain @audio-context)] ; This will be GC'd too when sample playback ends
+        (aset source "buffer" buffer)
+        (aset source "playbackRate" "value" (:pitch note))
+        (aset gain "gain" "value" (* scale-volume (:volume note)))
+        (.connect source gain)
+        (.connect gain (:input @master))
+        (.start source (:pos note))))))

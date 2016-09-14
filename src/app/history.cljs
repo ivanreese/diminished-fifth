@@ -43,8 +43,12 @@
 (defn add-history-prop [player key skipN]
   (add-history-player player key (get player key) skipN))
 
-
 (defn init-history [id key]
   (swap! history assoc-in [id key] #js [])
   (swap! history-min assoc-in [id key] Infinity)
   (swap! history-max assoc-in [id key] -Infinity))
+
+(defn init []
+  (reset! history {})
+  (reset! history-min {})
+  (reset! history-max {}))

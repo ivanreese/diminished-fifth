@@ -1,7 +1,6 @@
 (ns app.assets
-  (:require [app.math :as math]
-            [app.util :refer [log]]
-            [app.audio :as audio]
+  (:require [app.util :refer [log]]
+            [app.state :refer [audio-context buffers]]
             [ajax.core :refer [GET]]
             [cljs.core.async :as async :refer [<! >! chan close!]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -35,34 +34,48 @@
    (let [decode-ch (chan)
          audio-xhr (<! (ajax-audio-channel url))
          audio-data (aget audio-xhr "target" "response")]
-     (audio/decode audio-data (callback-to-channel decode-ch))
+     (.decodeAudioData @audio-context audio-data (callback-to-channel decode-ch))
      {:name url
       :index index
       :buffer (<! decode-ch)})))
 
-(defn make-note [index line]
-  (-> [:pitch :volume :position]
-      (zipmap (mapv js/Number (clojure.string/split line " ")))
-      (assoc :index index)
-      (update :position / 1000)
-      (update :volume math/to-precision 12)))
+; (defn load-samples [manifest]
+;   (go
+;    (->> (get manifest "samples")
+;         (map #(str "samples" "/" %))
+;         (map-indexed sample-loader)
+;         (async/merge)
+;         (async/into [])
+;         (<!)
+;         (sort-by :index))))
 
-(defn melody-loader [index url]
-  (go
-   (let [melody (<! (ajax-channel url))
-         lines (clojure.string/split-lines melody)]
-     {:name url
-      :index index
-      :duration (/ (last lines) 1000)
-      :notes (map-indexed make-note
-                          (drop-last lines))})))
+(defn make-sample [index url]
+  {:name url
+   :index index})
 
-(defn load-assets [manifest type loader-fn]
-  (go
-   (->> (get manifest type)
-        (map #(str type "/" %))
-        (map-indexed loader-fn)
-        (async/merge)
-        (async/into [])
-        (<!)
-        (sort-by :index))))
+(defn load-samples [manifest]
+  (->> (get manifest "samples")
+       (map #(str "samples/" %))
+       (map-indexed make-sample)))
+
+(defn request-sample [sample]
+  (let [index (:index sample)
+        url (:name sample)]
+    (when (nil? (get @buffers index))
+      (swap! buffers assoc index sample)
+      (go
+       (let [decode-ch (chan)
+             audio-xhr (<! (ajax-audio-channel url))
+             audio-data (aget audio-xhr "target" "response")]
+         (.decodeAudioData @audio-context audio-data (callback-to-channel decode-ch))
+         (swap! buffers assoc-in [index :buffer] (<! decode-ch)))))))
+
+
+; If the sample is loaded, return the buffer
+; If not, start loading the sample
+(defn get-buffer [sample]
+  (if-let [buffer (get-in @buffers [(:index sample) :buffer])]
+    buffer
+    (do
+     (request-sample sample)
+     nil)))
