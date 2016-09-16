@@ -3,13 +3,15 @@
             [app.color :as color]
             [app.math :as math :refer [tau]]
             [app.player :as player]
-            [app.state :refer [history history-min history-max]]))
+            [app.state :refer [history history-min history-max]]
+            [app.util :refer [snoop-logg]]))
 
 (def dpi 2)
 (def pad (- (* 8 dpi) 0.5))
 (def top (+ 48 pad))
-(def columns (atom 3))
+(def columns (atom 1))
 (defonce scale (atom 1))
+(defonce inited (atom false))
 
 (defn mod-hash-color [val]
   (color/hsl (mod (+ 100 (hash val)) 360) 70 70))
@@ -58,12 +60,22 @@
 (defn draw-dying! [stack player velocity]
   (if (:dying player)
     (cond
-      (>= (:transposition player) player/max-transposition) (stack-text! stack (str "Dying: Xpos"))
-      (> (* velocity (:scale player)) player/max-velocity) (stack-text! stack (str "Dying: Vel"))
-      :else (stack-text! stack (str "Dying")))
+      (>= (:transposition player) player/max-transposition)
+      (stack-text! stack (str "Dying: Xpos"))
+      
+      (> velocity player/max-death-velocity)
+      (stack-text! stack (str "Dying: Vel"))
+      
+      :else
+      (stack-text! stack (str "Dying")))
     stack))
 
-(defn draw-history [ctx subject-key base-x base-y width height max-history]
+(defn draw-ahead! [stack player]
+  (if (:ahead player)
+    (stack-text! stack (str "Ahead"))
+    stack))
+
+(defn draw-history [ctx subject-key base-x base-y width height max-history color]
   (doseq [prop-tuple (get @history subject-key)
           :let [prop-key (nth prop-tuple 0)
                 values (nth prop-tuple 1)
@@ -73,6 +85,7 @@
                 v-range (max 0.0000001 (- max-v min-v)) ;; avoid a divide by 0 error
                 n-values' (- n-values 1)]]
     (when (> n-values 1)
+      (when color (canvas/strokeStyle! ctx (mod-hash-color (name prop-key))))
       (canvas/beginPath! ctx)
       (loop [i 0 draw-fn canvas/moveTo!]
         (let [v (aget values i)]
@@ -83,6 +96,46 @@
           (when (< i n-values')
             (recur (inc i) canvas/lineTo!))))
       (canvas/stroke! ctx)))
+  ctx)
+
+(defn draw-sync-markers [ctx player base-x base-y width height]
+  (canvas/beginPath! ctx)
+  (let [xunit (/ width 28.8)]
+    (loop [x (mod (/ (:position player) (:scale player)) 1.8)]
+      (when (< x 28.8)
+        (canvas/moveTo! ctx (+ base-x (* x xunit)) base-y)
+        (canvas/lineTo! ctx (+ base-x (* x xunit)) (+ base-y height))
+        (recur (+ x 1.8)))))
+  (canvas/stroke! ctx)
+  ctx)
+
+(defn draw-melody [ctx player base-x base-y width height]
+  (let [drone (:drone player)
+        xstep (/ width 28.8)
+        ystep (/ height 5)
+        melody (:melody player)]
+    (canvas/beginPath! ctx)
+    (canvas/lineWidth! ctx 4)
+    (loop [notes (:notes melody)]
+      (when-not (empty? notes)
+        (let [note (first notes)
+              bottom (if drone (/ height 3) height)
+              top (- height (* ystep (if drone 2 (:pitch note))))]
+          (-> ctx
+            ; (canvas/beginPath!)
+            ; (canvas/arc! (+ base-x (* xstep (:position note))) (+ base-y (- height (* ystep (:pitch note)))) 2 0 tau false)
+            ; (canvas/fill!)
+            (canvas/moveTo! (+ base-x (* xstep (:position note))) (+ base-y bottom))
+            (canvas/lineTo! (+ base-x (* xstep (:position note))) (+ base-y top)))
+          (recur (rest notes)))))
+    (canvas/stroke! ctx)
+    (canvas/lineWidth! ctx 1)
+    (let [x (+ base-x (* xstep (mod (:position player) (:duration melody))))]
+      (-> ctx
+        (canvas/beginPath!)
+        (canvas/moveTo! x base-y)
+        (canvas/lineTo! x (+ base-y height))
+        (canvas/stroke!))))
   ctx)
 
 (defn draw-player [state context player index player-count width height]
@@ -109,15 +162,30 @@
       (begin-stack! (+ x pad (canvas/textWidth context playerName))
                     (+ y h)
                     (str (* 12 dpi @scale) "px sans-serif"))
+      (stack-text! (str "Scale " (math/to-fixed (:scale player) 2)))
       (stack-text! (str "Vol " (math/to-fixed (:volume player) 1)))
       (stack-text! (str "Note " (:upcoming-note player)))
-      (stack-text! (str "Scale " (:scale player)))
       (stack-text! (str "Xpos " (:transposition player)))
       (stack-text! (str "Pos " (math/to-fixed (:position player) 2)))
       (stack-text! (str "Pitch " (math/to-fixed (:current-pitch player) 2)))
       (draw-dying! player (get-in state [:orchestra :velocity]))
       (end-stack!)
-      (draw-history (:index player) x (+ y ygutter) w (- h textHeight ygutter) 1000))))
+      (draw-history (:index player) x (+ y ygutter) w (- h textHeight ygutter) 1000 false)
+      (canvas/strokeStyle! "black")
+      (draw-sync-markers player x (+ y ygutter) w (- h textHeight ygutter))
+      (canvas/strokeStyle! c)
+      (draw-melody player x (+ y ygutter) w (- h textHeight ygutter)))))
+
+(defn draw-drum-pattern [ctx player base-x base-y width height]
+  (let [xstep (/ width 28.8)
+        ystep (/ height 5)]
+    (let [x (+ base-x (* xstep (mod (:position player) 28.8)))]
+      (-> ctx
+        (canvas/beginPath!)
+        (canvas/moveTo! x base-y)
+        (canvas/lineTo! x (+ base-y height))
+        (canvas/stroke!))))
+  ctx)
 
 (defn draw-drummer [state context player index player-count width height]
   (let [gutter (* 3 dpi pad)
@@ -143,19 +211,18 @@
       (begin-stack! (+ x pad (canvas/textWidth context playerName))
                     (+ y h)
                     (str (* 12 dpi @scale) "px sans-serif"))
+      (stack-text! (str "Scale " (math/to-fixed (:scale player) 2)))
       (stack-text! (str "Vol " (math/to-fixed (:volume player) 1)))
-      (stack-text! (str "Scale " (:scale player)))
       (stack-text! (str "Pos " (math/to-fixed (:position player) 2)))
-      (stack-text! (str "Next " (math/to-fixed (:next-position player) 2)))
       (stack-text! (str "Duration " (math/to-fixed (:duration player) 2)))
+      (draw-ahead! player)
       (draw-dying! player (get-in state [:orchestra :velocity]))
       (end-stack!)
-      (draw-history (:index player) x (+ y ygutter) w (- h textHeight ygutter) 1000))))
-
-(defn snoop-logg [player]
-  (js/console.log (clj->js player))
-  player)
-
+      (draw-history (:index player) x (+ y ygutter) w (- h textHeight ygutter) 1000 false)
+      (canvas/strokeStyle! "black")
+      (draw-sync-markers player x (+ y ygutter) w (- h textHeight ygutter))
+      (canvas/strokeStyle! c)
+      (draw-drum-pattern player x (+ y ygutter) w (- h textHeight ygutter)))))
 
 (defn render-players [state context]
   (let [all-players (:players state)
@@ -166,7 +233,6 @@
       (when-not (empty? players)
         (let [player (first players)
               type (:type player)]
-          ; (snoop-logg player)
           (cond
             (= type :player)
             (draw-player state context player index player-count w h)
@@ -195,22 +261,28 @@
       (stack-text! (str "Xpos " (math/to-fixed (get-in state [:orchestra :transposition]) 2)))
       (stack-text! (str "Vel " (math/to-fixed (get-in state [:orchestra :velocity]) 4)))
       (end-stack!)
-      (draw-history :orchestra pad pad width (- (+ height top) pad textHeight) 12000))))
+      (draw-history :orchestra pad pad width (- (+ height top) pad textHeight) 12000 true))))
 
 (defn resize! []
-  (let [context @app.state/text-context
-        w (* dpi (.-innerWidth js/window))
-        h (* dpi (.-innerHeight js/window))]
-    (swap! app.state/state assoc :width w)
-    (swap! app.state/state assoc :height h)
-    (swap! app.state/state assoc :dpi dpi)
-    (canvas/resize! context w h)
-    (reset! scale (/ h 1000 dpi))
-    (reset! columns (max 1 (quot w 1280)))))
+  (when @inited
+    (let [context @app.state/text-context
+          w (* dpi (.-innerWidth js/window))
+          h (* dpi (.-innerHeight js/window))]
+      (swap! app.state/state assoc :width w)
+      (swap! app.state/state assoc :height h)
+      (swap! app.state/state assoc :dpi dpi)
+      (canvas/resize! context w h)
+      (reset! scale (/ h 1000 dpi))
+      (reset! columns (max 1 (quot w 960))))))
 
 (defn render! []
-  (let [context @app.state/text-context
-        state @app.state/state]
-    (canvas/clear! context)
-    (render-players state context)
-    (render-orchestra state context)))
+  (when @inited
+    (let [context @app.state/text-context
+          state @app.state/state]
+      (canvas/clear! context)
+      (render-players state context)
+      (render-orchestra state context))))
+
+(defn init []
+  (reset! app.state/text-context (canvas/create!))
+  (reset! inited true))

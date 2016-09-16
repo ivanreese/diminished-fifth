@@ -2,6 +2,7 @@
 
 (defonce state (atom {}))
 
+(defonce manifest (atom nil))
 (defonce samples (atom {}))
 (defonce melodies (atom {}))
 

@@ -10,51 +10,58 @@
             [cljs.pprint :refer [pprint]]))
 
 (def key-change-steps 7)
-(def min-rescale-velocity 0.5) ; These trigger rescale
-(def max-rescale-velocity 2)
 (def min-players 1)
-(def max-players 18)
-(def spawn-time (span/make 6 6)) ;(span/make 4 9))
+(def max-players 64)
+(def spawn-time (span/make 1 6))
 (def key-change-time (span/make 240 240)) ;(span/make 60 600))
-(def min-velocity 0)
-(def max-velocity 4)
-(def velocity-cycle-time 180)
-(def drummer-frac .25)
+(def min-sin (- 1 .03))
+(def max-sin (+ 1 .03))
+(def rescale-vel-min 0.5)
+(def rescale-vel-max 2)
+(def cycle-time 40)
+(def drummer-frac .5)
+(def initial-vel 1)
 
 
-; PLAYBACK RATE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; VELOCITY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn advance-velocity [state dt time]
-  (let [velocity (math/scale (math/pow (math/sin (/ time velocity-cycle-time)) 3) -1 1 min-velocity max-velocity)
-        scaled-velocity (max (* (+ 1 (/ time 1200)) velocity) velocity)]
-    (history/add-history :orchestra :velocity scaled-velocity (Math/ceil (Math/sqrt (get-in state [:engine :count]))))
-    (assoc-in state [:orchestra :velocity] scaled-velocity)))
+(defn tick-velocity [state dt time]
+  (let [accel (math/scale (math/pow (math/sin (/ time cycle-time)) 3) -1 1 min-sin max-sin)
+        velocity (* (get-in state [:orchestra :velocity]) (Math/pow accel dt))
+        step 10]
+    (history/add-history :orchestra :accel accel step)
+    (history/add-history :orchestra :velocity velocity step)
+    (assoc-in state [:orchestra :velocity] velocity)))
+
+
+; RESCALE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn rescale-player [player factor]
+  (case (:type player)
+        :player (update player :scale * factor)
+        :drummer (drummer/rescale player factor)))
 
 (defn rescale-players [players factor]
-  (mapv #(player/rescale % factor) players))
+  (mapv #(rescale-player % factor) players))
 
 (defn rescale [state factor]
   (-> state
-    (update-in [:orchestra :scale] / factor)
+    (update-in [:orchestra :velocity] / factor)
     (update :players rescale-players factor)))
 
-(defn restrict-velocity [state]
-  (cond
-    (< (* (get-in state [:orchestra :scale]) (get-in state [:orchestra :velocity])) min-rescale-velocity)
-    (rescale state min-rescale-velocity)
-    (> (* (get-in state [:orchestra :scale]) (get-in state [:orchestra :velocity])) max-rescale-velocity)
-    (rescale state max-rescale-velocity)
-    true
-    state))
-
-(defn tick-velocity [state dt time]
-  (-> state
-      (advance-velocity dt time)))
-      ; (restrict-velocity)))
+(defn tick-rescale [state]
+  (let [velocity (get-in state [:orchestra :velocity])]
+    (if (> velocity rescale-vel-max)
+      (rescale state rescale-vel-max)
+      (if (< velocity rescale-vel-min)
+        (rescale state rescale-vel-min)
+        state))))
 
 
 ; PLAYERS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 (declare spawn)
 
@@ -62,7 +69,6 @@
   (if (> min-players (count (:players state)))
     (spawn state time)
     state))
-
 
 (defn do-tick [player dt velocity transposition]
   (case (:type player)
@@ -92,13 +98,11 @@
 (defn next-spawn-time [time]
   (+ time (span/random spawn-time)))
 
-
 (defn update-transposition [transposition]
   (loop [t (* transposition (math/pow 2 (/ key-change-steps 12)))]
     (if (> t 1.5)
       (recur (/ t 2))
       t)))
-
 
 (defn key-change [state time]
   (-> state
@@ -110,17 +114,10 @@
     (key-change state time)
     state))
 
-
 (defn get-sync-position [player]
-  (let [type (:type player)
-        duration (case type
-                       :player (player/get-duration player)
-                       :drummer (drummer/get-duration player))]
-    (mod
-     (/ (mod (+ (:position player) duration)
-             duration) ; This mod stuff ensures that we aren't < 0
-        (:scale player))
-     duration))) ; mod by duration twice because scale might be less than 1 (right?)
+  (case (:type player)
+        :player (player/get-sync-position player)
+        :drummer (drummer/get-sync-position player)))
     
 (defn spawn [state time]
   (let [players (:players state)
@@ -138,7 +135,6 @@
             (assoc-in [:orchestra :spawn-time] (next-spawn-time time))
             (check-key-change time))))))
 
-
 (defn tick-spawn [state time]
   (if (>= time (get-in state [:orchestra :spawn-time]))
     (spawn state time)
@@ -150,17 +146,18 @@
 
 (defn init [state time]
   (history/init-history :orchestra :velocity)
+  (history/init-history :orchestra :accel)
   (-> state
       (assoc :players [])
-      (assoc :orchestra {:key-change-time   (next-key-change-time time)
-                         :next-player-index (int (math/random 0 10000)) ; 0
-                         :velocity 1
-                         :scale 1
-                         :spawn-time        (next-spawn-time time)
+      (assoc :orchestra {:key-change-time (next-key-change-time time)
+                         :next-player-index 0; (int (math/random 0 10000))
+                         :velocity initial-vel
+                         :spawn-time (next-spawn-time time)
                          :transposition 1})))
 
 (defn tick [state dt time]
   (-> state
       (tick-velocity dt time)
+      (tick-rescale)
       (tick-players dt time)
       (tick-spawn time)))

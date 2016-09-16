@@ -11,35 +11,23 @@
 (def transpose-on-repeat 2)
 (def initial-transposition 1)
 (def min-transposition (/ initial-transposition 16))
-(def max-transposition (* initial-transposition 16))
-(def min-velocity (/ 1 64))
-(def max-velocity 32)
+(def max-transposition (* initial-transposition 8))
+(def min-death-velocity (/ 1 64))
+(def max-death-velocity 32)
 (def drone-frac .1)
 
-;; ASSETS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-(defn get-note-at-index [melody index]
-  (nth (:notes melody) index))
-
-(defn get-player-melody [player]
-  (nth @melodies (:melody-index player)))
-
-(defn get-melody-at-index [index]
-  (nth @melodies index))
-
-(defn get-upcoming-note [player]
-  (get-note-at-index (get-player-melody player)
-                     (:upcoming-note player)))
 
 ;; MAKE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn get-duration [reference-player]
-  (:duration (get-player-melody reference-player)))
-
-(defn determine-starting-note [melody-index player-position]
-  (let [notes (:notes (get-melody-at-index melody-index))
+(defn get-sync-position [reference-player]
+  (let [position (:position reference-player)
+        duration (:duration reference-player)]
+    (/ (if (< position 0) (+ position duration) position)
+       (:scale reference-player))))
+  
+(defn determine-starting-note [melody player-position]
+  (let [notes (:notes melody)
         upcoming-note-index (:index (first (filter #(>= (:position %) player-position) notes)))]
     (or upcoming-note-index 0)))
 
@@ -47,50 +35,38 @@
 ;; UPDATES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn update-position [player dt velocity]
-  (let [velocity (* velocity dt (:scale player))
-        position (+ (:position player) velocity)
-        raw-position (+ (:raw-position player) velocity)]
-    (-> player
-      ; (history/add-history-player :position raw-position 6)
-      (assoc :position position)
-      (assoc :raw-position raw-position))))
+(defn update-position [player dt scaled-velocity]
+  (update player :position + (* scaled-velocity dt)))
 
-(defn update-dying [player dt velocity]
-  (assoc player :dying
-         (or (:dying player)
-            ;  (< (* velocity (:scale player)) min-velocity)
-             (> (* velocity (:scale player)) max-velocity)
-             (<= (:transposition player) min-transposition)
-             (>= (:transposition player) max-transposition))))
+(defn update-dying [player scaled-velocity]
+  (assoc player :dying (or (:dying player)
+                           (< scaled-velocity min-death-velocity)
+                           (> scaled-velocity max-death-velocity)
+                           (<= (:transposition player) min-transposition)
+                           (>= (:transposition player) max-transposition))))
 
 (defn update-volume [player dt velocity]
-  (let [volume (math/clip
-                (if (:dying player)
-                  (- (:volume player)
-                     (* dt (+ 0.5 (/ velocity 2)) fade-rate))
-                  (+ (:volume player)
-                     (* dt (+ 0.5 (/ velocity 2)) fade-rate))))]
-    (-> player
-      ; (history/add-history-player :volume volume 30)
-      (assoc :volume volume))))
+  (assoc player :volume (math/clip ((if (:dying player) - +)
+                                    (:volume player)
+                                    (* dt (+ 0.5 (/ velocity 2)) fade-rate)))))
 
 (defn update-alive [player]
-  (assoc player :alive
-         (or (not (:dying player))
-             (> (:volume player) 0))))
+  (assoc player :alive (or (not (:dying player))
+                           (> (:volume player) 0))))
 
 (defn update-history [player]
-  (when (:history-active player)
-    (history/add-history-prop player :current-pitch 1))
-  player)
+  (if (:history-active player)
+    (-> player
+      (history/add-history-prop :current-pitch 1)
+      (history/trim-history))
+    player))
 
 
 ; PLAY NOTE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defn update-upcoming-note [player]
-  (let [melody (get-player-melody player)
+  (let [melody (:melody player)
         notes (:notes melody)
         duration (:duration melody)
         upcoming-note (inc (:upcoming-note player))]
@@ -111,7 +87,7 @@
   player)
 
 (defn update-played-note [player key-transposition]
-  (let [note (get-upcoming-note player)
+  (let [note (nth (:notes (:melody player)) (:upcoming-note player))
         player-pos (:position player)
         note-pos (:position note)
         note-pitch (if (:drone player) 1 (:pitch note))
@@ -128,25 +104,24 @@
 ;; PUBLIC ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn make [sync-position index velocity] ;; What stops the position from being WAY too high?
+(defn make [sync-position index velocity]
   (let [melody-index (mod index (count @melodies))
         sample-index (mod index (count @samples))
-        position (mod sync-position (:duration (get-melody-at-index melody-index)))
-        upcoming-note (determine-starting-note melody-index position)]
-    ; (history/init-history index :upcoming-note)
+        scale (math/clip (math/pow 2 (math/round (math/log2 (/ 1 velocity)))) (/ 1 32) 8)
+        melody (nth @melodies melody-index)
+        position (mod (* sync-position scale) (:duration melody))
+        upcoming-note (determine-starting-note melody position)]
     (history/init-history index :current-pitch)
-    ; (history/init-history index :position)
-    ; (history/init-history index :volume)
     {:type :player
      :index index
-     :melody-index melody-index
+     :melody melody
      :sample (nth @samples sample-index)
-     :position position ; The current time we're at in the pattern, in ms
-     :raw-position position
+     :position position
+     :duration (:duration melody)
      :upcoming-note upcoming-note
      :current-pitch (* initial-transposition (:pitch upcoming-note))
      :transposition initial-transposition ; Adjusted every time the track repeats by transposeOnRepeat
-     :scale (math/clip (math/pow 2 (math/round (math/log2 (/ 1 velocity)))) (/ 1 32) 8)
+     :scale scale
      :volume 0
      :history-active false
      :drone (< (Math/random) drone-frac)
@@ -155,14 +130,11 @@
      :color (color/hsl (mod (* index 11) 360) 60 70)}))
 
 (defn tick [player dt velocity key-transposition]
-  (-> player
-      (update-position dt velocity)
-      (update-dying dt velocity)
-      (update-volume dt velocity)
-      (update-alive)
-      (update-played-note key-transposition)
-      (update-history)
-      (history/trim-history)))
-
-(defn rescale [player factor]
-  (update player :scale * factor))
+  (let [scaled-velocity (* velocity (:scale player))]
+    (-> player
+        (update-position dt scaled-velocity)
+        (update-dying scaled-velocity)
+        (update-volume dt velocity)
+        (update-alive)
+        (update-played-note key-transposition)
+        (update-history))))

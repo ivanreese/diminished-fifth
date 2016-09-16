@@ -1,8 +1,8 @@
 (ns app.audio
   (:require [app.assets :as assets]
-            [app.state :refer [audio-context master sample-rate]]))
+            [app.state :refer [state audio-context master sample-rate]]))
 
-(def scale-volume .1)
+(def scale-volume 1)
 
 (defn make-impulse [n length decay]
   (* (- 1 (* 2 (.random js/Math)))
@@ -75,7 +75,7 @@
 
 (defn play [sample note]
   (let [buffer (assets/get-buffer sample)]
-    (when-not (nil? buffer)
+    (when-not (or (nil? buffer) (:mute @state))
       (let [source (.createBufferSource @audio-context) ;; We don't need a ref to this — it is GC'd when sample playback ends
             gain (.createGain @audio-context)] ; This will be GC'd too when sample playback ends
         (aset source "buffer" buffer)

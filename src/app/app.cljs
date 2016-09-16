@@ -1,13 +1,13 @@
-(ns ^:figwheel-always app.app
+(ns app.app
   (:require [app.assets :refer [ajax-channel load-samples]]
             [app.audio :as audio]
-            [app.canvas :as canvas]
             [app.engine :as engine]
             [app.history :as history]
             [app.melodies :as melodies]
             [app.orchestra :as orchestra]
             [app.render :as render]
-            [app.state :refer [state samples callback text-context]]
+            [app.state :refer [manifest state samples callback]]
+            [app.util :refer [snoop-logg]]
             [cljs.core.async :refer [<!]]
             [cljs.pprint :refer [pprint]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
@@ -25,6 +25,7 @@
   (when-not (:gui-disabled @state)
     (render/render!))
   (when (:tick-once-mode @state)
+    (swap! state assoc :tick-once-mode false)
     (pause)))
 
 (defn resize [& args]
@@ -54,21 +55,24 @@
     (render/render!)))
 
 (defn tick-once []
-  (let [mode (not (:tick-once-mode @state))
-        btn (js/document.querySelector ".tick-once.button")]
-    (swap! state assoc :tick-once-mode mode)
-    (when mode
-      (.setAttribute btn "active" true)
-      (play))
-    (when-not mode
-      (.removeAttribute btn "active"))))
+  (swap! state assoc :tick-once-mode true)
+  (play))
 
-(defn toggle-gui []
+(defn gui []
   (let [gui-disabled (not (:gui-disabled @state))
-        btn (js/document.querySelector ".toggle-gui.button")]
+        btn (js/document.querySelector ".gui.button")]
     (swap! state assoc :gui-disabled gui-disabled)
     (render/render!)
     (if gui-disabled
+      (.setAttribute btn "active" true)
+      (.removeAttribute btn "active"))))
+
+(defn mute []
+  (let [muted (not (:mute @state))
+        btn (js/document.querySelector ".mute.button")]
+    (swap! state assoc :mute muted)
+    (render/render!)
+    (if muted
       (.setAttribute btn "active" true)
       (.removeAttribute btn "active"))))
 
@@ -81,12 +85,13 @@
   (.removeEventListener js/window "click" init)
   (.removeEventListener preload-elm "click" init)
   (audio/setup)
+  (render/init)
   (melodies/init)
   (set! (.-textContent preload-elm) "Loading Audio Files")
   (go
-    (let [manifest (<! (ajax-channel "manifest.json"))]
-      (reset! samples (load-samples manifest))
-      (reset! text-context (canvas/create!))
+    (let [manifest-data (<! (ajax-channel "manifest.json"))]
+      (reset! manifest manifest-data)
+      (reset! samples (load-samples manifest-data))
       (js/window.addEventListener "resize" resize)
       (.setAttribute preload-elm "hide", "")
       (.removeAttribute (js/document.querySelector ".buttons") "hide")
@@ -95,12 +100,13 @@
       (setup-button "restart" restart)
       (setup-button "tick-once" tick-once)
       (setup-button "redraw" render/render!)
-      (setup-button "toggle-gui" toggle-gui)
+      (setup-button "gui" gui)
+      (setup-button "mute" mute)
       (setup-button "fullscreen" fullscreen)
       (setup-button "sound-check" sound-check)
       (setup-button "transpose" transpose)
-      (restart))))
-      ; (play))))
+      (restart)
+      (play))))
 
 (defn preload []
   (set! (.-textContent preload-elm) "Click To Init")

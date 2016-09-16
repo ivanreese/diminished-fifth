@@ -3,28 +3,26 @@
             [app.color :as color]
             [app.history :as history]
             [app.math :as math]
-            [app.state :refer [state melodies samples]]
+            [app.state :refer [manifest state melodies samples]]
             [app.util :refer [snoop-logg]]
             [cljs.pprint :refer [pprint]]))
 
 (def fade-rate 0.05)
-(def min-velocity (/ 1 32))
-(def max-velocity 16)
-(def max-position 64)
+(def max-age (* 4 28.8))
+(def ahead-frac 0.1)
+(def ahead-dist 0.45)
 
-(defn update-history [player]
-  (when (:history-active player)
-    (history/add-history-prop player :next-position 1))
-  player)
+(defn rescale [player factor]
+  (update player :scale * factor))
+  
+(defn get-sync-position [reference-player]
+  (/ (:raw-position reference-player)
+     (:scale reference-player)))
 
-(defn get-duration [reference-drummer]
-  (:duration reference-drummer))
-
-(defn update-position [player dt velocity]
-  (let [velocity (* velocity dt (:scale player))
-        position (+ (:position player) velocity)]
-    (-> player
-      (assoc :position position))))
+(defn update-position [player dt scaled-velocity]
+  (-> player
+    (update :position + (* scaled-velocity dt))
+    (update :raw-position + (* scaled-velocity dt))))
 
 (defn update-volume [player dt velocity]
   (assoc player :volume (math/clip
@@ -34,10 +32,9 @@
                            (+ (:volume player)
                               (* dt (+ 0.5 (/ velocity 2)) fade-rate))))))
 
-(defn update-dying [player dt velocity]
-  (assoc player :dying
-         (or (:dying player)
-             (> (:position player) max-position))))
+(defn update-dying [player]
+  (assoc player :dying (or (:dying player)
+                           (>= (:age player) (/ max-age (:duration player))))))
 
 (defn update-alive [player]
   (assoc player :alive
@@ -51,50 +48,54 @@
                :volume (* (:volume player) (:max-volume player))})
   player)
 
-(defn update-upcoming-note [player]
-  (update player :next-position + (:duration player)))
-
 (defn update-played-note [player]
   (let [player-pos (:position player)
-        next-pos (:next-position player)]
-    (if (< player-pos next-pos)
+        duration (:duration player)]
+    (if (< player-pos duration)
       player
       (-> player
         (assoc :history-active true)
-        (play-note! next-pos)
-        (update-upcoming-note)))))
+        (play-note! duration)
+        (update :position - duration)
+        (update :age + 1)))))
 
 (def subtypes [:kick :snare :tick :cym :special])
-(def sample-choices   [7 10 16 17 18 19 34 45 47 72 74 79 80])
-(def duration-choices [28.8 14.4 7.2 3.6 1.8 .6])
+(def sample-choices [7 10 16 17 18 19 34 45 47 72 74 79])
+(def duration-choices [28.8 19.2 14.4 9.6 7.2 4.8 3.6 2.4])
 
-(defn make [position index velocity]
+(defn get-subtype [index]
+  (let [subtype-key (nth subtypes (mod index (count subtypes)))
+        subtype (get-in @manifest ["drummer" (name subtype-key)])]
+    (nth subtype (mod index (count subtype)))))
+
+(defn make [sync-position index velocity]
   (let [sample-index (nth sample-choices (mod index (count sample-choices))) ;(mod index (count @samples))]
-        duration (nth duration-choices (mod index (count duration-choices)))]
-    (history/init-history index :next-position)
+        scale (math/clip (math/pow 2 (math/round (math/log2 (/ 1 velocity)))) (/ 1 32) 8)
+        duration (nth duration-choices (mod index (count duration-choices)))
+        ahead (< (Math/random) ahead-frac)
+        position (mod (* sync-position scale) duration)
+        subtype-sample-name (get-subtype index)]
     {:type :drummer
-     :index index ; Used by history and renderer
+     :index index
+     :ahead ahead
      :sample (nth @samples sample-index)
-     :position position ; The current time we're at in the pattern, in ms
-     :next-position (* (+ 1 (quot position duration)) duration)
-     :scale (math/clip (math/pow 2 (math/round (math/log2 (/ 1 velocity)))) (/ 1 32) 8)
+     :position (+ position (if ahead ahead-dist 0))
+     :raw-position position
+     :scale scale
      :volume 0
-     :max-volume (+ 0.5 (Math/random))
+     :age 0
+     :max-volume (+ 0.5 (/ (Math/random) 1.5))
      :duration duration
      :history-active false
-     :alive true ; When we die, we'll get filtered out of the list of players. Also used by history.
+     :alive true
      :dying false
      :color (color/hsl (mod (* index 11) 360) 0 70)}))
 
 (defn tick [player dt velocity]
-  (-> player
-      (update-position dt velocity)
-      (update-dying dt velocity)
-      (update-volume dt velocity)
-      (update-alive)
-      (update-played-note)
-      (update-history)
-      (history/trim-history)))
-
-(defn rescale [player factor]
-  (update player :scale * factor))
+  (let [scaled-velocity (* velocity (:scale player))]
+    (-> player
+        (update-position dt scaled-velocity)
+        (update-dying)
+        (update-volume dt velocity)
+        (update-alive)
+        (update-played-note))))
