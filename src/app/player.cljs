@@ -79,7 +79,7 @@
 
 (defn play-note! [player note pitch]
   (if (> 64 pitch (/ 1 16))
-    (let [xpos-vol-factor (/ 1 (+ 1 (/ (Math/pow (Math/log2 (:transposition player)) 2) 128)))] ;; 1/(1+x^2) is a gauss-like fn. We're using 1/(1+(x^2 / 128)), which tweaks it to work better with the stuff we get
+    (let [xpos-vol-factor (/ 1 (+ 1 (/ (Math/pow (Math/log2 (:transposition player)) 2) 64)))] ;; 1/(1+x^2) is a gauss-like fn. We're using 1/(1+(x^2 / 64)), which tweaks it to work better with the stuff we get
       (audio/play (:sample player)
                   {:pos (- (:position player) (:position note))
                    :pitch pitch

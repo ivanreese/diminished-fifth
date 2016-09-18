@@ -85,7 +85,6 @@
   (.removeEventListener js/window "click" init)
   (.removeEventListener preload-elm "click" init)
   (audio/setup)
-  (render/init)
   (melodies/init)
   (set! (.-textContent preload-elm) "Loading Audio Files")
   (go

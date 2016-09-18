@@ -11,16 +11,16 @@
 
 (def key-change-steps 7)
 (def min-players 1)
-(def max-players 64)
-(def spawn-time (span/make 1 6))
+(def max-players 32)
+(def spawn-time (span/make 1 4))
 (def key-change-time (span/make 240 240)) ;(span/make 60 600))
 (def min-sin (- 1 .03))
 (def max-sin (+ 1 .03))
 (def rescale-vel-min 0.5)
 (def rescale-vel-max 2)
 (def cycle-time 40)
-(def drummer-frac .5)
-(def initial-vel 1)
+(def initial-vel .5)
+(def min-drum-frac .5) ;; 50% drummers at most
 
 
 ; VELOCITY ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -28,7 +28,7 @@
 
 (defn tick-velocity [state dt time]
   (let [accel (math/scale (math/pow (math/sin (/ time cycle-time)) 3) -1 1 min-sin max-sin)
-        velocity (* (get-in state [:orchestra :velocity]) (Math/pow accel dt))
+        velocity (Math/max 0.0000001 (* (get-in state [:orchestra :velocity]) (Math/pow accel dt)))
         step 10]
     (history/add-history :orchestra :accel accel step)
     (history/add-history :orchestra :velocity velocity step)
@@ -124,7 +124,10 @@
         nplayers (count players)]
     (if (>= nplayers max-players)
       state
-      (let [make-player (if (< (Math/random) drummer-frac) drummer/make player/make)
+      (let [drum-frac (Math/min min-drum-frac
+                                (/ (get-in state [:orchestra :velocity]) 4) ;; spawn fewer drummers at slower tempos
+                                (/ (get-in state [:engine :count]) 10000)) ;; spawn fewer drummers at first
+            make-player (if (< (Math/random) drum-frac) drummer/make player/make)
             position (if (zero? nplayers) 0 (get-sync-position (last players)))
             new-player (make-player position
                                     (get-in state [:orchestra :next-player-index])
@@ -133,6 +136,7 @@
             (update :players conj new-player)
             (update-in [:orchestra :next-player-index] inc)
             (assoc-in [:orchestra :spawn-time] (next-spawn-time time))
+            (assoc-in [:orchestra :drum-frac] drum-frac)
             (check-key-change time))))))
 
 (defn tick-spawn [state time]
@@ -152,6 +156,7 @@
       (assoc :orchestra {:key-change-time (next-key-change-time time)
                          :next-player-index 0; (int (math/random 0 10000))
                          :velocity initial-vel
+                         :drum-frac 0
                          :spawn-time (next-spawn-time time)
                          :transposition 1})))
 

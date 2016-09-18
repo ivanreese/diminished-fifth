@@ -84,12 +84,11 @@
      :scale scale
      :volume 0
      :age 0
-     :max-volume (+ 0.5 (/ (Math/random) 1.5))
+     :max-volume (+ 0.5 (* 4 (Math/random)))
      :duration duration
      :history-active false
      :alive true
-     :dying false
-     :color (color/hsl (mod (* index 11) 360) 0 70)}))
+     :dying false}))
 
 (defn tick [player dt velocity]
   (let [scaled-velocity (* velocity (:scale player))]
