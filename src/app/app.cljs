@@ -108,7 +108,7 @@
       (play))))
 
 (defn preload []
-  (set! (.-textContent preload-elm) "Click To Init")
+  (set! (.-textContent preload-elm) "Click To Play")
   (.addEventListener preload-elm "click" init)
   (.addEventListener js/window "click" init))
 
