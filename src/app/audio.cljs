@@ -40,9 +40,9 @@
   (reset! audio-context (let [AC (or (.-AudioContext js/window)
                                      (.-webkitAudioContext js/window))]
                            (AC.)))
-  
+
   (reset! sample-rate (.-sampleRate @audio-context))
-  
+
   (reset! master
     (let [input (.createGain @audio-context)
           analyser (.createAnalyser @audio-context)
@@ -51,19 +51,19 @@
           hard-compressor (.createDynamicsCompressor @audio-context)
           output (.createGain @audio-context)]
       (aset input "gain" "value" 1)
-      (aset (:wet reverb) "value" 0.3)
+      (aset (:wet reverb) "value" .6)
       (aset (:dry reverb) "value" 1)
       (aset soft-compressor "attack" "value" 0.05)
       (aset soft-compressor "knee" "value" 10)
-      (aset soft-compressor "ratio" "value" 20)
-      (aset soft-compressor "release" "value" 0.05)
-      (aset soft-compressor "threshold" "value" -36)
+      (aset soft-compressor "ratio" "value" 3)
+      (aset soft-compressor "release" "value" 0.1)
+      (aset soft-compressor "threshold" "value" -15)
       (aset hard-compressor "attack" "value" 0.003)
       (aset hard-compressor "knee" "value" 5)
-      (aset hard-compressor "ratio" "value" 20)
+      (aset hard-compressor "ratio" "value" 15)
       (aset hard-compressor "release" "value" 0.01)
       (aset hard-compressor "threshold" "value" -6)
-      (aset output "gain" "value" .66)
+      (aset output "gain" "value" .7)
       (.connect input analyser)
       (.connect analyser (:input reverb))
       (.connect (:output reverb) soft-compressor)

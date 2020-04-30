@@ -4,6 +4,7 @@
             [app.history :as history]
             [app.math :as math]
             [app.state :refer [state melodies samples]]
+            [app.tuning :as tuning]
             [app.util :refer [snoop-logg]]
             [cljs.pprint :refer [pprint]]))
 
@@ -14,7 +15,6 @@
 (def max-transposition (* initial-transposition 8))
 (def min-death-velocity (/ 1 64))
 (def max-death-velocity 32)
-(def drone-frac .1)
 
 
 ;; MAKE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -25,7 +25,7 @@
         duration (:duration reference-player)]
     (/ (if (< position 0) (+ position duration) position)
        (:scale reference-player))))
-  
+
 (defn determine-starting-note [melody player-position]
   (let [notes (:notes melody)
         upcoming-note-index (:index (first (filter #(>= (:position %) player-position) notes)))]
@@ -90,7 +90,7 @@
   (let [note (nth (:notes (:melody player)) (:upcoming-note player))
         player-pos (:position player)
         note-pos (:position note)
-        note-pitch (if (:drone player) 1 (:pitch note))
+        note-pitch (tuning/pythagorean (:pitch note))
         pitch (* note-pitch (:transposition player) key-transposition)]
     (if (< player-pos note-pos)
       player
@@ -124,7 +124,6 @@
      :scale scale
      :volume 0
      :history-active false
-     :drone (< (Math/random) drone-frac)
      :alive true ; When we die, we'll get filtered out of the list of players
      :dying false
      :color (color/hsl (mod (* index 11) 360) 60 70)}))
